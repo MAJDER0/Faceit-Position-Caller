@@ -1,24 +1,17 @@
 {
+  "manifest_version": 3,
   "name": "Faceit Position Caller",
   "version": "0.1.0",
-  "description": "Description of your extension",
-  "permissions": [ "storage", "tabs" ],
+  "description": "Send preset messages into team chat when a match is ready on FACEIT.",
+  "permissions": [ "storage", "tabs", "activeTab", "scripting", "webNavigation" ],
   "host_permissions": [ "https://*.faceit.com/*" ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": [ "https://*.faceit.com/*" ],
+      "matches": [ "https://www.faceit.com/pl/home", "https://*.faceit.com/*" ],
       "js": [ "contentScript.js" ]
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-
-      ],
-      "matches": [ "https://*.faceit.com/*" ]
     }
   ],
   "action": {
@@ -27,6 +20,5 @@
     },
     "default_title": "Faceit Position Caller",
     "default_popup": "popup.html"
-  },
-  "manifest_version": 3
+  }
 }
