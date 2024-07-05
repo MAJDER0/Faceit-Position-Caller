@@ -1,14 +1,16 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const input = document.getElementById('message');
-    const button = document.getElementById('save');
+// popup.js
 
-    button.addEventListener('click', () => {
-        const message = input.value;
-        console.log('Message from text box:', message);
+// popup.js
 
-        // Save the message to chrome.storage.sync
-        chrome.storage.sync.set({ 'matchMessage': message }, () => {
-            console.log('Message saved:', message);
+document.getElementById('save').addEventListener('click', function () {
+    let message = document.getElementById('message').value;
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'sendMessage', text: message }, function (response) {
+            if (chrome.runtime.lastError) {
+                console.error(chrome.runtime.lastError.message);
+            } else {
+                console.log('Message sent to content script');
+            }
         });
     });
 });
