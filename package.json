@@ -1,0 +1,11 @@
+{
+  "name": "faceit_position_caller_extension",
+  "version": "1.0.0",
+  "description": "Faceit Position Caller - Call your position faster on the map ",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "MAJDER",
+  "license": "ISC"
+}
