@@ -1,7 +1,5 @@
 // popup.js
 
-// popup.js
-
 document.getElementById('save').addEventListener('click', function () {
     let message = document.getElementById('message').value;
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
