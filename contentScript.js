@@ -1,3 +1,5 @@
+//contentScript
+
 // Listen for messages from popup.js or other parts of the extension
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     if (message.action === 'sendMessage') {
