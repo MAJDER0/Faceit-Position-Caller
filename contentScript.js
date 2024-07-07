@@ -1,3 +1,5 @@
+console.log('Content script loaded and running.');
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'sendMessage') {
         console.log('Received message to send:', request.text);

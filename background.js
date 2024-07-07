@@ -22,16 +22,30 @@ try {
         console.error('Error details:', error);
     });
 
-    socket.on('matchReady', (message) => {
-        console.log('check');
-        chrome.tabs.query({ url: 'https://www.faceit.com/*' }, (tabs) => {
-            tabs.forEach((tab) => {
-                chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    func: (msg) => {
-                        chrome.runtime.sendMessage({ action: 'sendMessage', text: msg });
-                    },
-                    args: [message]
+    socket.on('matchReady', () => {
+        console.log('Received matchReady event');
+        chrome.storage.local.get('savedMessage', (data) => {
+            console.log('before sending1');
+            const message = data.savedMessage || '';
+            chrome.tabs.query({}, (tabs) => {
+                const urlPattern = /\/cs2\/room/;
+                const matchingTabs = tabs.filter(tab => urlPattern.test(tab.url));
+                if (matchingTabs.length === 0) {
+                    console.log('No matching tabs found');
+                    return;
+                }
+                matchingTabs.forEach((tab) => {
+                    console.log('Found tab:', tab.id);
+
+                    chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        files: ['contentScript.js']
+                    }).then(() => {
+                        console.log('Content script injected.');
+                        chrome.tabs.sendMessage(tab.id, { action: 'sendMessage', text: message });
+                    }).catch((error) => {
+                        console.error('Error injecting content script:', error);
+                    });
                 });
             });
         });
@@ -41,10 +55,11 @@ try {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'getSavedMessage') {
-        chrome.storage.local.get('savedMessage', (data) => {
-            sendResponse(data.savedMessage || '');
+    if (message.action === 'updateSavedMessage') {
+        console.log('Updated saved message:', message.savedMessage);
+        chrome.storage.local.set({ savedMessage: message.savedMessage }, () => {
+            sendResponse({ status: 'saved' });
         });
-        return true;
+        return true; // Required to send a response asynchronously
     }
 });

@@ -16,9 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const savedMessage = messageInput.value;
             chrome.storage.local.set({ 'savedMessage': savedMessage }, () => {
                 console.log('Saved message to local storage:', savedMessage);
-                chrome.runtime.sendMessage({ action: 'getSavedMessage' }, (response) => {
-                    console.log('Saved message sent to background script:', response);
-                });
+                chrome.runtime.sendMessage({ action: 'updateSavedMessage', savedMessage: savedMessage });
             });
         }
     });
