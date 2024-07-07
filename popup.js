@@ -1,35 +1,25 @@
-// popup.js
+document.addEventListener('DOMContentLoaded', function () {
+    const messageInput = document.getElementById('message');
+    const changeButton = document.getElementById('change');
 
-// Retrieve the saved message from local storage
-let savedMessage = localStorage.getItem('savedMessage') || '';
-const messageInput = document.getElementById('message');
-messageInput.value = savedMessage;
+    chrome.storage.local.get('savedMessage', (data) => {
+        messageInput.value = data.savedMessage || '';
+    });
 
-// Toggle input and change button visibility
-const changeButton = document.getElementById('change');
-changeButton.addEventListener('click', function () {
-    const isDisabled = messageInput.disabled;
-    messageInput.disabled = !isDisabled;
-    messageInput.focus(); // Focus on input when enabled
-    changeButton.textContent = isDisabled ? 'Save' : 'Change';
-    if (!isDisabled) {
-        // Save the message to local storage
-        savedMessage = messageInput.value;
-        localStorage.setItem('savedMessage', savedMessage);
-    }
+    changeButton.addEventListener('click', function () {
+        const isDisabled = messageInput.disabled;
+        messageInput.disabled = !isDisabled;
+        messageInput.focus();
+        changeButton.textContent = isDisabled ? 'Save' : 'Change';
+
+        if (!isDisabled) {
+            const savedMessage = messageInput.value;
+            chrome.storage.local.set({ 'savedMessage': savedMessage }, () => {
+                console.log('Saved message to local storage:', savedMessage);
+                chrome.runtime.sendMessage({ action: 'getSavedMessage' }, (response) => {
+                    console.log('Saved message sent to background script:', response);
+                });
+            });
+        }
+    });
 });
-
-// Handle automatic message sending on match ready (simulated with a button click)
-document.getElementById('save').addEventListener('click', function () {
-    // Simulate match ready event
-    simulateMatchReady(savedMessage);
-});
-
-// Replace the simulateMatchReady function with actual logic to handle match ready event
-function simulateMatchReady(message) {
-    console.log('Match is ready! Sending message to team chat:', message);
-    // Replace with logic to send message to team chat
-    // For testing, you can log the message to the console or display an alert
-    alert('Match is ready! Sending message to team chat: ' + message);
-}
-
