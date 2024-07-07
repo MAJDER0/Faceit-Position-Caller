@@ -20,8 +20,8 @@ app.post('/IsMatchReady', (req, res) => {
     const event = req.body;
     console.log('Received webhook event:', event);
 
-    if (event.event.includes('match_status_ready')) {
-        console.log('true');
+    if (event.event && event.event.includes('match_object_created'){
+        console.log('Match status is ready');
         io.emit('matchReady', 'Match is ready!');
         console.log('Emitted matchReady event');
     }

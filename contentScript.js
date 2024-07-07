@@ -3,7 +3,7 @@ console.log('Content script loaded and running.');
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'sendMessage') {
         console.log('Received message to send:', request.text);
-        const textarea = document.querySelector('textarea[placeholder^="Message team_"]');
+        const textarea = document.querySelector('textarea[placeholder^="Message FACEIT"]');
         if (textarea) {
             textarea.value = request.text;
             textarea.dispatchEvent(new Event('input', { bubbles: true }));
