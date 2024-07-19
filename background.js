@@ -22,32 +22,39 @@ try {
         console.error('Error details:', error);
     });
 
-    socket.on('matchReady', () => {
-        console.log('Received matchReady event');
+    socket.on('matchReady', (matchId) => {
+        console.log('Received matchReady event with matchId:', matchId);
         chrome.storage.local.get('savedMessage', (data) => {
-            console.log('before sending1');
             const message = data.savedMessage || '';
-            chrome.tabs.query({}, (tabs) => {
-                const urlPattern = /\/cs2\/room/;
-                const matchingTabs = tabs.filter(tab => urlPattern.test(tab.url));
-                if (matchingTabs.length === 0) {
-                    console.log('No matching tabs found');
-                    return;
-                }
-                matchingTabs.forEach((tab) => {
-                    console.log('Found tab:', tab.id);
+            const matchUrl = `https://www.faceit.com/pl/cs2/room/${matchId}`;
 
-                    chrome.scripting.executeScript({
-                        target: { tabId: tab.id },
-                        files: ['contentScript.js']
-                    }).then(() => {
-                        console.log('Content script injected.');
-                        chrome.tabs.sendMessage(tab.id, { action: 'sendMessage', text: message });
-                    }).catch((error) => {
-                        console.error('Error injecting content script:', error);
-                    });
+            // Start polling for the match room page
+            const checkTabsInterval = setInterval(() => {
+                chrome.tabs.query({}, (tabs) => {
+                    const matchingTab = tabs.find(tab => tab.url === matchUrl);
+                    if (matchingTab) {
+                        console.log('Found matching tab:', matchingTab.id);
+
+                        // Wait an additional 2 seconds to ensure the page is fully loaded
+                        setTimeout(() => {
+                            chrome.scripting.executeScript({
+                                target: { tabId: matchingTab.id },
+                                files: ['contentScript.js']
+                            }).then(() => {
+                                console.log('Content script injected.');
+                                chrome.tabs.sendMessage(matchingTab.id, { action: 'sendMessage', text: message });
+                            }).catch((error) => {
+                                console.error('Error injecting content script:', error);
+                            });
+                        }, 2000); // Adjust this delay as needed
+
+                        // Clear the interval once the matching tab is found
+                        clearInterval(checkTabsInterval);
+                    } else {
+                        console.log('Matching tab not found yet');
+                    }
                 });
-            });
+            }, 1000); // Check every second
         });
     });
 } catch (e) {

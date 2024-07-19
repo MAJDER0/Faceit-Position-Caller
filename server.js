@@ -9,25 +9,29 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: 'https://6e1e-91-230-98-24.ngrok-free.app',
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
 }));
 
 app.use(bodyParser.json());
 
+
 app.post('/IsMatchReady', (req, res) => {
     const event = req.body;
     console.log('Received webhook event:', event);
 
-    if (event.event && event.event.includes('match_object_created'){
+    if ((event.event && event.event.includes('match_object_created')) || (event.event && event.event == 'match_object_created')) {
+        const matchId = event.payload.id;
         console.log('Match status is ready');
-        io.emit('matchReady', 'Match is ready!');
-        console.log('Emitted matchReady event');
+        io.emit('matchReady', matchId);
+        console.log('Emitted matchReady event with matchId:', matchId);
     }
 
     res.status(200).send('Webhook received');
 });
+
+
 
 const PORT = process.env.PORT || 3000;
 

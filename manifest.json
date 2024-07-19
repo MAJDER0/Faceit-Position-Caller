@@ -19,7 +19,7 @@
   },
   "content_scripts": [
     {
-      "matches": [ "https://*.faceit.com/*" ],
+      "matches": [ "https://*.faceit.com/room/*" ],
       "js": [ "contentScript.js" ]
     }
   ],

@@ -1,3 +1,4 @@
+//popup.js
 document.addEventListener('DOMContentLoaded', function () {
     const messageInput = document.getElementById('message');
     const changeButton = document.getElementById('change');
