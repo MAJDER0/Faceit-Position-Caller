@@ -9,13 +9,12 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(cors({
-    origin: 'https://6e1e-91-230-98-24.ngrok-free.app',
+    origin: '*',  // Allow all origins (adjust if needed for production)
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
 }));
 
 app.use(bodyParser.json());
-
 
 app.post('/IsMatchReady', (req, res) => {
     const event = req.body;
@@ -30,8 +29,6 @@ app.post('/IsMatchReady', (req, res) => {
 
     res.status(200).send('Webhook received');
 });
-
-
 
 const PORT = process.env.PORT || 3000;
 

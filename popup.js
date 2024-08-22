@@ -1,34 +1,33 @@
-//popup.js
 document.addEventListener('DOMContentLoaded', function () {
-    const messageInput = document.getElementById('message');
-    const changeButton = document.getElementById('change');
+    const loginButton = document.getElementById('login');
 
-    chrome.storage.local.get(['savedMessage', 'isMessageCentered'], (data) => {
-        messageInput.value = data.savedMessage || '';
-        messageInput.style.textAlign = data.isMessageCentered ? 'center' : 'left';
+    // Check if user is already logged in (optional)
+    chrome.storage.local.get(['accessToken'], function (data) {
+        if (data.accessToken) {
+            // User is logged in, show message container
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('message-container').style.display = 'block';
+        } else {
+            // User is not logged in, show login button
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('message-container').style.display = 'none';
+        }
     });
 
-    changeButton.addEventListener('click', function () {
-        const isDisabled = messageInput.disabled;
-        messageInput.disabled = !isDisabled;
-        messageInput.focus();
-        changeButton.textContent = isDisabled ? 'Save' : 'Change';
+    loginButton.addEventListener('click', () => {
+        // Send a message to the background script to start the OAuth2 flow
+        chrome.runtime.sendMessage({ action: 'startOAuth2' });
+    });
 
-        if (!isDisabled) {
-            const savedMessage = messageInput.value;
-            chrome.storage.local.set({
-                'savedMessage': savedMessage,
-                'isMessageCentered': true
-            }, () => {
-                console.log('Saved message to local storage:', savedMessage);
-                chrome.runtime.sendMessage({ action: 'updateSavedMessage', savedMessage: savedMessage });
-                // Center the text
-                messageInput.style.textAlign = 'center';
-            });
-        } else {
-            // Reset text alignment when enabling the input
-            messageInput.style.textAlign = 'left';
-            chrome.storage.local.set({ 'isMessageCentered': false });
-        }
+    // Handle the change button to update the saved message
+    document.getElementById('change').addEventListener('click', () => {
+        const message = document.getElementById('message').value;
+        chrome.runtime.sendMessage({ action: 'updateSavedMessage', savedMessage: message }, (response) => {
+            if (response.status === 'saved') {
+                alert('Message updated successfully!');
+            } else {
+                alert('Failed to update message.');
+            }
+        });
     });
 });

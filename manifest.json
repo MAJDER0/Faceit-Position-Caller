@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "description": "Send preset messages into team chat when a match is ready on FACEIT.",
   "permissions": [
+    "identity",
     "storage",
     "tabs",
     "activeTab",

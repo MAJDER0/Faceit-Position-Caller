@@ -1,8 +1,9 @@
 {
   "ExpandedNodes": [
     "",
+    "\\Assets",
     "\\libs"
   ],
-  "SelectedNode": "\\contentScript.js",
+  "SelectedNode": "\\manifest.json",
   "PreviewInSolutionExplorer": false
 }

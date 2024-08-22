@@ -4,11 +4,16 @@
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-    <div class="container">
+    <div id="login-container">
+        <button id="login">Login with Faceit</button>
+    </div>
+
+    <div id="message-container" style="display: none;">
         <h3>Take your position</h3>
         <input type="text" id="message" placeholder="Type your message here..." disabled>
         <button id="change">Change</button>
     </div>
+
     <script src="popup.js"></script>
 </body>
 </html>

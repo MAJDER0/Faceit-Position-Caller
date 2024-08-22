@@ -24,44 +24,68 @@ try {
 
     socket.on('matchReady', (matchId) => {
         console.log('Received matchReady event with matchId:', matchId);
-        chrome.storage.local.get('savedMessage', (data) => {
+        chrome.storage.local.get(['savedMessage', 'accessToken'], (data) => {
             const message = data.savedMessage || '';
-            const matchUrl = `https://www.faceit.com/pl/cs2/room/${matchId}`;
+            const accessToken = data.accessToken;
+            const roomId = `cs2/room/${matchId}`;
 
-            // Start polling for the match room page
-            const checkTabsInterval = setInterval(() => {
-                chrome.tabs.query({}, (tabs) => {
-                    const matchingTab = tabs.find(tab => tab.url === matchUrl);
-                    if (matchingTab) {
-                        console.log('Found matching tab:', matchingTab.id);
-
-                        // Wait an additional 2 seconds to ensure the page is fully loaded
-                        setTimeout(() => {
-                            chrome.scripting.executeScript({
-                                target: { tabId: matchingTab.id },
-                                files: ['contentScript.js']
-                            }).then(() => {
-                                console.log('Content script injected.');
-                                chrome.tabs.sendMessage(matchingTab.id, { action: 'sendMessage', text: message });
-                            }).catch((error) => {
-                                console.error('Error injecting content script:', error);
-                            });
-                        }, 2000); // Adjust this delay as needed
-
-                        // Clear the interval once the matching tab is found
-                        clearInterval(checkTabsInterval);
-                    } else {
-                        console.log('Matching tab not found yet');
-                    }
-                });
-            }, 1000); // Check every second
+            fetch(`https://open.faceit.com/chat/v1/rooms/${roomId}/messages`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ body: message })
+            })
+                .then(response => response.json())
+                .then(data => console.log('Message sent, response:', data))
+                .catch(error => console.error('Error sending message:', error));
         });
     });
+
 } catch (e) {
     console.error('Failed to load Socket.IO script:', e);
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'startOAuth2') {
+        console.log('Starting OAuth2 flow...');
+
+        const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org`;
+        const myclientID = '';
+
+        chrome.identity.launchWebAuthFlow({
+            url: `https://accounts.faceit.com/?response_type=code&client_id=${myclientID}&redirect_uri=${encodeURIComponent(redirectUri)}`,
+            interactive: true
+        }, function (redirectUrl) {
+            console.log('OAuth2 callback function invoked');
+            if (chrome.runtime.lastError) {
+                console.error('OAuth2 flow failed:', chrome.runtime.lastError);
+                return;
+            }
+
+            if (!redirectUrl) {
+                console.error('No redirect URL received.');
+                return;
+            }
+
+            console.log("Received redirect URL:", redirectUrl);
+
+            try {
+                const urlParams = new URLSearchParams(new URL(redirectUrl).search);
+                const code = urlParams.get('code');
+                if (code) {
+                    console.log('Authorization code received:', code);
+                    // Proceed with exchanging the code for tokens
+                } else {
+                    console.error('No authorization code found in redirect URL.');
+                }
+            } catch (error) {
+                console.error('Error parsing redirect URL:', error);
+            }
+        });
+    }
+
     if (message.action === 'updateSavedMessage') {
         console.log('Updated saved message:', message.savedMessage);
         chrome.storage.local.set({ savedMessage: message.savedMessage }, () => {
