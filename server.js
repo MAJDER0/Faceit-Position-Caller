@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(cors({
-    origin: '*',  // Allow all origins (adjust if needed for production)
+    origin: '*',  
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
 }));
@@ -20,7 +20,7 @@ app.post('/IsMatchReady', (req, res) => {
     const event = req.body;
     console.log('Received webhook event:', event);
 
-    if ((event.event && event.event.includes('match_object_created')) || (event.event && event.event == 'match_object_created')) {
+    if ((event.event && event.event.includes('match_object_created')) || (event.event && event.event === 'match_object_created')) {
         const matchId = event.payload.id;
         console.log('Match status is ready');
         io.emit('matchReady', matchId);
