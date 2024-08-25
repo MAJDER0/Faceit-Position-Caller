@@ -32,21 +32,9 @@ try {
 
     socket.on('matchReady', (matchId) => {
         console.log('Received matchReady event with matchId:', matchId);
-        chrome.storage.local.get(['savedMessage', 'accessToken'], (data) => {
-            const message = data.savedMessage || '';
-            const roomId = `cs2/room/${matchId}`;
-
-            fetch(`https://open.faceit.com/chat/v1/rooms/${roomId}/messages`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${data.accessToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ body: message })
-            })
-                .then(response => response.json())
-                .then(data => console.log('Message sent, response:', data))
-                .catch(error => console.error('Error sending message:', error));
+        chrome.storage.local.set({ matchId }, () => {
+            console.log('Match ID saved in local storage:', matchId);
+            checkForMatchRoomTab(matchId);
         });
     });
 
@@ -54,6 +42,108 @@ try {
     console.error('Failed to load Socket.IO script:', e);
 }
 
+function checkForMatchRoomTab(matchId, attempts = 0) {
+    const maxAttempts = 40; // 40 attempts with 1 second interval = 40 seconds
+    const matchRoomUrlPattern = `/cs2/room/${matchId}`;
+
+    console.log('Checking for match room links containing:', matchRoomUrlPattern);
+
+    chrome.tabs.query({}, (tabs) => {
+        let matchTabFound = false;
+
+        for (let tab of tabs) {
+            if (tab.url && tab.url.includes(matchRoomUrlPattern)) {
+                console.log('Match room tab found:', tab.url);
+                triggerMessageSending(matchId);
+                matchTabFound = true;
+                break;
+            }
+        }
+
+        if (!matchTabFound && attempts < maxAttempts) {
+            setTimeout(() => {
+                console.log(`Attempt ${attempts + 1} to find match room tab...`);
+                checkForMatchRoomTab(matchId, attempts + 1);
+            }, 1000); // Retry every 1 second
+        } else if (!matchTabFound) {
+            console.log('Match room tab not found after 40 attempts (40 seconds).');
+        }
+    });
+}
+
+
+function triggerMessageSending(matchId) {
+    chrome.storage.local.get(['savedMessage', 'accessToken'], (data) => {
+        const message = data.savedMessage || '';
+        const roomId = `match-${matchId}`;
+
+        console.log('Sending message to room:', roomId);
+
+        fetch(`https://open.faceit.com/chat/v1/rooms/${roomId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${data.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ body: message })
+        })
+            .then(response => response.json())
+            .catch(error => console.error('Error sending message:', error));
+    });
+}
+
+function refreshAccessToken() {
+    loadSettings(settings => {
+        chrome.storage.local.get(['refreshToken'], (data) => {
+            const refreshToken = data.refreshToken;
+
+            if (!refreshToken) {
+                console.error('Refresh token not found.');
+                return;
+            }
+
+            const clientId = settings.faceit.clientId;
+            const clientSecret = settings.faceit.clientSecret;
+            const tokenUrl = settings.faceit.tokenUrl;
+
+            const encodedCredentials = btoa(`${clientId}:${clientSecret}`);
+
+            const params = new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken,
+                client_id: clientId
+            });
+
+            fetch(tokenUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': `Basic ${encodedCredentials}`,
+                },
+                body: params.toString(),
+            })
+                .then(response => response.json())
+                .then(data => {
+
+                    // Save the new access token in local storage
+                    chrome.storage.local.set({ accessToken: data.access_token }, () => {
+                    });
+
+                    // Optionally, update the refresh token if it has changed
+                    if (data.refresh_token) {
+                        chrome.storage.local.set({ refreshToken: data.refresh_token }, () => {
+                        });
+                    }
+                })
+                .catch(error => console.error('Error refreshing access token:', error));
+        });
+    });
+}
+
+// Call this function periodically, e.g., every 23 hours to refresh the token before it expires
+setInterval(refreshAccessToken, 22 * 60 * 60 * 1000); // 22 hours in milliseconds
+
+// OAuth2 related functions (no changes needed)
 function generateCodeVerifier() {
     const array = new Uint32Array(56 / 2);
     crypto.getRandomValues(array);
@@ -93,6 +183,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             return;
                         }
 
+                        console.log("Received redirect URL:", redirectUrl);
 
                         try {
                             const urlParams = new URLSearchParams(new URL(redirectUrl).search);
@@ -160,7 +251,26 @@ const exchangeCodeForToken = (code, clientId, redirectUri, tokenUrl) => {
                     return response.json(); // Parse the response as JSON
                 })
                 .then(data => {
-                    chrome.storage.local.set({ accessToken: data.access_token });
+
+                    // Save the access token and refresh token in local storage
+                    chrome.storage.local.set({
+                        accessToken: data.access_token,
+                        refreshToken: data.refresh_token
+                    }, () => {
+
+                        // Fetch the user info
+                        fetch('https://api.faceit.com/auth/v1/resources/userinfo', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${data.access_token}`,
+                            },
+                        })
+                            .then(response => response.json())
+                            .then(userinfo => {
+
+                            })
+                            .catch(error => console.error('Error fetching user info:', error));
+                    });
                 })
                 .catch(error => console.error('Error exchanging code for token:', error));
         });
