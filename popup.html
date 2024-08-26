@@ -5,14 +5,19 @@
 </head>
 <body>
     <div id="login-container">
-        <button id="login">Login with Faceit</button>
+        <div id="WelcomeMessage">
+            <span id="animatedInfo">Please log in via FACEIT to access the features.</span>
+        </div>
+        <button id="login"><img src="Assets/faceit.ico" height="30" width="30" /><span>LOGIN WITH FACEIT</span></button>
     </div>
 
     <div id="message-container" style="display: none;">
-        <h3>Take your position</h3>
+        <div id="messagePlayerInfo"></div>
+        <span id="messageInfo"></span>
         <input type="text" id="message" placeholder="Type your message here..." disabled>
-        <button id="change">Change</button>
+        <button id="change"><span>Change</span></button>
     </div>
+
 
     <script src="popup.js"></script>
 </body>

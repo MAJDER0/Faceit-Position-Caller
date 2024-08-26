@@ -71,7 +71,6 @@ function checkForMatchRoomTab(matchId, attempts = 0) {
     });
 }
 
-
 function triggerMessageSending(matchId) {
     chrome.storage.local.get(['savedMessage', 'accessToken'], (data) => {
         const message = data.savedMessage || '';
@@ -88,6 +87,7 @@ function triggerMessageSending(matchId) {
             body: JSON.stringify({ body: message })
         })
             .then(response => response.json())
+            .then(data => console.log('Message sent, response:', data))
             .catch(error => console.error('Error sending message:', error));
     });
 }
@@ -124,14 +124,17 @@ function refreshAccessToken() {
             })
                 .then(response => response.json())
                 .then(data => {
+                    console.log('New access token received:', data.access_token);
 
                     // Save the new access token in local storage
                     chrome.storage.local.set({ accessToken: data.access_token }, () => {
+                        console.log('New access token saved in local storage.');
                     });
 
                     // Optionally, update the refresh token if it has changed
                     if (data.refresh_token) {
                         chrome.storage.local.set({ refreshToken: data.refresh_token }, () => {
+                            console.log('Refresh token updated in local storage.');
                         });
                     }
                 })
@@ -140,10 +143,33 @@ function refreshAccessToken() {
     });
 }
 
-// Call this function periodically, e.g., every 23 hours to refresh the token before it expires
+// Call this function periodically, e.g., every 22 hours to refresh the token before it expires
 setInterval(refreshAccessToken, 22 * 60 * 60 * 1000); // 22 hours in milliseconds
 
-// OAuth2 related functions (no changes needed)
+// Fetch and save user info in local storage
+function fetchAndSaveUserInfo(accessToken) {
+    fetch('https://api.faceit.com/auth/v1/resources/userinfo', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+        },
+    })
+        .then(response => response.json())
+        .then(userinfo => {
+            const nickname = userinfo.nickname;
+            const country = userinfo.locale;
+            console.log('User nickname:', nickname);
+            console.log('User country:', country);
+
+            // Save the user's nickname and country in local storage
+            chrome.storage.local.set({ nickname, country }, () => {
+                console.log('User information saved in local storage.');
+            });
+        })
+        .catch(error => console.error('Error fetching user info:', error));
+}
+
+// OAuth2 related functions
 function generateCodeVerifier() {
     const array = new Uint32Array(56 / 2);
     crypto.getRandomValues(array);
@@ -158,6 +184,7 @@ function generateCodeChallenge(verifier) {
         });
 }
 
+// Start the OAuth2 flow
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'startOAuth2') {
         console.log('Starting OAuth2 flow...');
@@ -189,6 +216,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             const urlParams = new URLSearchParams(new URL(redirectUrl).search);
                             const code = urlParams.get('code');
                             if (code) {
+                                console.log('Authorization code received:', code);
                                 exchangeCodeForToken(code, clientId, redirectUri, tokenUrl);
                             } else {
                                 console.error('No authorization code found in redirect URL.');
@@ -211,6 +239,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
+// Exchange the authorization code for an access token
 const exchangeCodeForToken = (code, clientId, redirectUri, tokenUrl) => {
     loadSettings(settings => {
         const clientSecret = settings.faceit.clientSecret;
@@ -242,6 +271,7 @@ const exchangeCodeForToken = (code, clientId, redirectUri, tokenUrl) => {
                 body: params.toString(),
             })
                 .then(response => {
+                    console.log('Full response:', response); // Log the entire response
                     if (!response.ok) {
                         return response.text().then(text => {
                             console.error(`Error response body: ${text}`);
@@ -251,25 +281,17 @@ const exchangeCodeForToken = (code, clientId, redirectUri, tokenUrl) => {
                     return response.json(); // Parse the response as JSON
                 })
                 .then(data => {
+                    console.log('Access token received:', data.access_token);
 
                     // Save the access token and refresh token in local storage
                     chrome.storage.local.set({
                         accessToken: data.access_token,
                         refreshToken: data.refresh_token
                     }, () => {
+                        console.log('Access and refresh tokens saved in local storage.');
 
-                        // Fetch the user info
-                        fetch('https://api.faceit.com/auth/v1/resources/userinfo', {
-                            method: 'GET',
-                            headers: {
-                                'Authorization': `Bearer ${data.access_token}`,
-                            },
-                        })
-                            .then(response => response.json())
-                            .then(userinfo => {
-
-                            })
-                            .catch(error => console.error('Error fetching user info:', error));
+                        // Fetch and save the user info
+                        fetchAndSaveUserInfo(data.access_token);
                     });
                 })
                 .catch(error => console.error('Error exchanging code for token:', error));
