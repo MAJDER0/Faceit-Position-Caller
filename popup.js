@@ -32,8 +32,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     console.error("Nickname or country is missing from local storage.");
                 }
 
-                // Set the initial state of the toggle button
-                toggleExtensionButton.querySelector('span').textContent = data.extensionEnabled ? 'ON' : 'OFF';
+                // Set the initial state of the toggle button (reversed logic)
+                toggleExtensionButton.querySelector('span').textContent = data.extensionEnabled ? 'OFF' : 'ON';
 
                 animateMessageText(); // Trigger the second animation when the message is displayed
             });
@@ -50,8 +50,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Check if user is already logged in
-    chrome.storage.local.get(['accessToken'], function (data) {
-        updateUI(!!data.accessToken);
+    chrome.storage.local.get(['accessToken', 'extensionEnabled'], function (data) {
+        // If extensionEnabled is undefined, set it to true (default ON state)
+        if (data.extensionEnabled === undefined) {
+            chrome.storage.local.set({ extensionEnabled: true }, function () {
+                updateUI(!!data.accessToken);
+            });
+        } else {
+            updateUI(!!data.accessToken);
+        }
     });
 
     // Listen for changes in storage to dynamically update the UI
@@ -75,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const isDisabled = messageInput.disabled;
         messageInput.disabled = !isDisabled;
         messageInput.focus();
-        changeButton.querySelector('span').textContent = isDisabled ? 'Save' : 'Change';
+        changeButton.querySelector('span').textContent = isDisabled ? 'SAVE' : 'ENTER A MESSAGE';
 
         if (!isDisabled) { // Save mode
             const savedMessage = messageInput.value;
@@ -109,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function () {
         chrome.storage.local.get('extensionEnabled', function (data) {
             const newState = !data.extensionEnabled;
             chrome.storage.local.set({ 'extensionEnabled': newState }, function () {
-                toggleExtensionButton.querySelector('span').textContent = newState ? 'ON' : 'OFF';
+                toggleExtensionButton.querySelector('span').textContent = newState ? 'OFF' : 'ON';
                 console.log('Extension state set to:', newState ? 'Enabled' : 'Disabled');
             });
         });

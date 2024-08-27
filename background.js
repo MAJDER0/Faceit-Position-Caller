@@ -1,3 +1,4 @@
+// Console log to indicate the background script is running
 console.log('Background script is running.');
 
 // Load settings from appsettings.json
@@ -6,6 +7,55 @@ function loadSettings(callback) {
         .then(response => response.json())
         .then(json => callback(json))
         .catch(error => console.error('Error loading settings:', error));
+}
+
+// Encryption function using the Web Crypto API
+async function encryptToken(token) {
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.generateKey(
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+    );
+
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv },
+        key,
+        enc.encode(token)
+    );
+
+    const exportedKey = await crypto.subtle.exportKey("raw", key);
+    const encryptedArray = new Uint8Array(encrypted);
+
+    console.log('Token after encryption:', encryptedArray);
+
+    return {
+        ciphertext: Array.from(encryptedArray),
+        iv: Array.from(iv),
+        key: Array.from(new Uint8Array(exportedKey))
+    };
+}
+
+// Decryption function using the Web Crypto API
+async function decryptToken(ciphertext, iv, key) {
+    const importedKey = await crypto.subtle.importKey(
+        "raw",
+        new Uint8Array(key),
+        "AES-GCM",
+        true,
+        ["decrypt"]
+    );
+
+    const decrypted = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: new Uint8Array(iv) },
+        importedKey,
+        new Uint8Array(ciphertext)
+    );
+
+    const token = new TextDecoder().decode(decrypted);
+    console.log('Token after decryption:', token);
+    return token;
 }
 
 // Import the Socket.IO library
@@ -86,7 +136,7 @@ function checkForMatchRoomTab(matchId, attempts = 0) {
 }
 
 function triggerMessageSending(matchId) {
-    chrome.storage.local.get(['savedMessage', 'accessToken', 'extensionEnabled'], (data) => {
+    chrome.storage.local.get(['savedMessage', 'accessToken', 'extensionEnabled'], async (data) => {
         if (!data.extensionEnabled) {
             console.log('Extension is disabled. Message will not be sent.');
             return;
@@ -95,12 +145,16 @@ function triggerMessageSending(matchId) {
         const message = data.savedMessage || '';
         const roomId = `match-${matchId}`;
 
+        // Decrypt the access token before using it
+        const { ciphertext, iv, key } = data.accessToken;
+        const decryptedToken = await decryptToken(ciphertext, iv, key);
+
         console.log('Sending message to room:', roomId);
 
         fetch(`https://open.faceit.com/chat/v1/rooms/${roomId}/messages`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${data.accessToken}`,
+                'Authorization': `Bearer ${decryptedToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ body: message })
@@ -113,16 +167,18 @@ function triggerMessageSending(matchId) {
 
 function refreshAccessToken() {
     loadSettings(settings => {
-        chrome.storage.local.get(['refreshToken', 'extensionEnabled'], (data) => {
+        chrome.storage.local.get(['refreshToken', 'extensionEnabled'], async (data) => {
             if (!data.extensionEnabled) {
                 console.log('Extension is disabled. Token refresh will not proceed.');
                 return;
             }
 
-            const refreshToken = data.refreshToken;
+            // Decrypt the refresh token before using it
+            const { ciphertext, iv, key } = data.refreshToken;
+            const decryptedRefreshToken = await decryptToken(ciphertext, iv, key);
 
-            if (!refreshToken) {
-                console.error('Refresh token not found.');
+            if (!decryptedRefreshToken) {
+                console.error('Decrypted refresh token not found.');
                 return;
             }
 
@@ -134,7 +190,7 @@ function refreshAccessToken() {
 
             const params = new URLSearchParams({
                 grant_type: 'refresh_token',
-                refresh_token: refreshToken,
+                refresh_token: decryptedRefreshToken,
                 client_id: clientId
             });
 
@@ -147,20 +203,19 @@ function refreshAccessToken() {
                 body: params.toString(),
             })
                 .then(response => response.json())
-                .then(data => {
-                    console.log('New access token received:', data.access_token);
+                .then(async data => {
 
-                    // Save the new access token in local storage
-                    chrome.storage.local.set({ accessToken: data.access_token }, () => {
-                        console.log('New access token saved in local storage.');
+                    // Encrypt the new access token and refresh token
+                    const encryptedAccessToken = await encryptToken(data.access_token);
+                    const encryptedRefreshToken = await encryptToken(data.refresh_token);
+
+                    // Save the encrypted tokens in local storage
+                    chrome.storage.local.set({
+                        accessToken: encryptedAccessToken,
+                        refreshToken: encryptedRefreshToken
+                    }, () => {
+                        console.log('New access and refresh tokens encrypted and saved in local storage.');
                     });
-
-                    // Optionally, update the refresh token if it has changed
-                    if (data.refresh_token) {
-                        chrome.storage.local.set({ refreshToken: data.refresh_token }, () => {
-                            console.log('Refresh token updated in local storage.');
-                        });
-                    }
                 })
                 .catch(error => console.error('Error refreshing access token:', error));
         });
@@ -304,15 +359,19 @@ const exchangeCodeForToken = (code, clientId, redirectUri, tokenUrl) => {
                     }
                     return response.json(); // Parse the response as JSON
                 })
-                .then(data => {
+                .then(async data => {
                     console.log('Access token received:', data.access_token);
 
-                    // Save the access token and refresh token in local storage
+                    // Encrypt the access token before storing
+                    const encryptedAccessToken = await encryptToken(data.access_token);
+                    const encryptedRefreshToken = await encryptToken(data.refresh_token);
+
+                    // Save the encrypted access token and refresh token in local storage
                     chrome.storage.local.set({
-                        accessToken: data.access_token,
-                        refreshToken: data.refresh_token
+                        accessToken: encryptedAccessToken,
+                        refreshToken: encryptedRefreshToken
                     }, () => {
-                        console.log('Access and refresh tokens saved in local storage.');
+                        console.log('Access and refresh tokens encrypted and saved in local storage.');
 
                         // Fetch and save the user info
                         fetchAndSaveUserInfo(data.access_token);
