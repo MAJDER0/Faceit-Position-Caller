@@ -4,8 +4,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const messageContainer = document.getElementById('message-container');
     const messageInput = document.getElementById('message');
     const changeButton = document.getElementById('change');
+    const logoutButton = document.getElementById('logout');
+    const toggleExtensionButton = document.getElementById('toggleExtension');
     const messageInfo = document.getElementById('messageInfo');
     const messagePlayerInfo = document.getElementById('messagePlayerInfo');
+    const bodyElement = document.body;
 
     // Function to update the UI based on the login status
     function updateUI(isLoggedIn) {
@@ -13,24 +16,35 @@ document.addEventListener('DOMContentLoaded', function () {
             loginContainer.style.display = 'none';
             messageContainer.style.display = 'block';
 
-            // Load the saved message, alignment, and user info from local storage
-            chrome.storage.local.get(['savedMessage', 'isMessageCentered', 'nickname', 'country'], (data) => {
+            // Increase the width and height by 50px
+            bodyElement.style.width = '500px';
+            bodyElement.style.height = '350px';
+
+            // Load the saved message, alignment, user info, and toggle state from local storage
+            chrome.storage.local.get(['savedMessage', 'isMessageCentered', 'nickname', 'country', 'extensionEnabled'], (data) => {
                 messageInput.value = data.savedMessage || '';
                 messageInput.style.textAlign = data.isMessageCentered ? 'center' : 'left';
 
-                // Display the user's nickname and country
+                // Display the user's nickname and country flag
                 if (data.nickname && data.country) {
                     messagePlayerInfo.innerHTML = `Hello, ${data.nickname} <img class="flague" src="https://flagsapi.com/${data.country.toUpperCase()}/shiny/64.png" width="22px" height="22px">`;
-
                 } else {
                     console.error("Nickname or country is missing from local storage.");
                 }
+
+                // Set the initial state of the toggle button
+                toggleExtensionButton.querySelector('span').textContent = data.extensionEnabled ? 'ON' : 'OFF';
 
                 animateMessageText(); // Trigger the second animation when the message is displayed
             });
         } else {
             loginContainer.style.display = 'block';
             messageContainer.style.display = 'none';
+
+            // Reset the width and height to the original size
+            bodyElement.style.width = '420px';
+            bodyElement.style.height = '270px';
+
             animateInfoText(); // Trigger the first animation on initial load
         }
     }
@@ -79,6 +93,26 @@ document.addEventListener('DOMContentLoaded', function () {
             messageInput.style.textAlign = 'left';
             chrome.storage.local.set({ 'isMessageCentered': false });
         }
+    });
+
+    logoutButton.addEventListener('click', function () {
+        // Clear all data from local storage
+        chrome.storage.local.clear(function () {
+            console.log('Local storage cleared.');
+            // Reset the UI to the login screen
+            updateUI(false);
+        });
+    });
+
+    toggleExtensionButton.addEventListener('click', function () {
+        // Toggle the extension functionality
+        chrome.storage.local.get('extensionEnabled', function (data) {
+            const newState = !data.extensionEnabled;
+            chrome.storage.local.set({ 'extensionEnabled': newState }, function () {
+                toggleExtensionButton.querySelector('span').textContent = newState ? 'ON' : 'OFF';
+                console.log('Extension state set to:', newState ? 'Enabled' : 'Disabled');
+            });
+        });
     });
 });
 

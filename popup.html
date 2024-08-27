@@ -8,7 +8,7 @@
         <div id="WelcomeMessage">
             <span id="animatedInfo">Please log in via FACEIT to access the features.</span>
         </div>
-        <button id="login"><img src="Assets/faceit.ico" height="30" width="30" /><span>LOGIN WITH FACEIT</span></button>
+        <button id="login"><img src="Assets/faceit.ico" height="20" width="20" /><span>LOGIN WITH FACEIT</span></button>
     </div>
 
     <div id="message-container" style="display: none;">
@@ -16,8 +16,11 @@
         <span id="messageInfo"></span>
         <input type="text" id="message" placeholder="Type your message here..." disabled>
         <button id="change"><span>Change</span></button>
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+            <button id="logout"><span>Logout</span></button>
+            <button id="toggleExtension"><span>OFF</span></button>
+        </div>
     </div>
-
 
     <script src="popup.js"></script>
 </body>

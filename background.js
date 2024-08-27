@@ -31,10 +31,17 @@ try {
     });
 
     socket.on('matchReady', (matchId) => {
-        console.log('Received matchReady event with matchId:', matchId);
-        chrome.storage.local.set({ matchId }, () => {
-            console.log('Match ID saved in local storage:', matchId);
-            checkForMatchRoomTab(matchId);
+        // Check if the extension is enabled before proceeding
+        chrome.storage.local.get('extensionEnabled', (data) => {
+            if (data.extensionEnabled) {
+                console.log('Received matchReady event with matchId:', matchId);
+                chrome.storage.local.set({ matchId }, () => {
+                    console.log('Match ID saved in local storage:', matchId);
+                    checkForMatchRoomTab(matchId);
+                });
+            } else {
+                console.log('Extension is disabled. Ignoring matchReady event.');
+            }
         });
     });
 
@@ -48,31 +55,43 @@ function checkForMatchRoomTab(matchId, attempts = 0) {
 
     console.log('Checking for match room links containing:', matchRoomUrlPattern);
 
-    chrome.tabs.query({}, (tabs) => {
-        let matchTabFound = false;
+    chrome.storage.local.get('extensionEnabled', (data) => {
+        if (!data.extensionEnabled) {
+            console.log('Extension is disabled. Stopping match room check.');
+            return;
+        }
 
-        for (let tab of tabs) {
-            if (tab.url && tab.url.includes(matchRoomUrlPattern)) {
-                console.log('Match room tab found:', tab.url);
-                triggerMessageSending(matchId);
-                matchTabFound = true;
-                break;
+        chrome.tabs.query({}, (tabs) => {
+            let matchTabFound = false;
+
+            for (let tab of tabs) {
+                if (tab.url && tab.url.includes(matchRoomUrlPattern)) {
+                    console.log('Match room tab found:', tab.url);
+                    triggerMessageSending(matchId);
+                    matchTabFound = true;
+                    break;
+                }
             }
-        }
 
-        if (!matchTabFound && attempts < maxAttempts) {
-            setTimeout(() => {
-                console.log(`Attempt ${attempts + 1} to find match room tab...`);
-                checkForMatchRoomTab(matchId, attempts + 1);
-            }, 1000); // Retry every 1 second
-        } else if (!matchTabFound) {
-            console.log('Match room tab not found after 40 attempts (40 seconds).');
-        }
+            if (!matchTabFound && attempts < maxAttempts) {
+                setTimeout(() => {
+                    console.log(`Attempt ${attempts + 1} to find match room tab...`);
+                    checkForMatchRoomTab(matchId, attempts + 1);
+                }, 1000); // Retry every 1 second
+            } else if (!matchTabFound) {
+                console.log('Match room tab not found after 40 attempts (40 seconds).');
+            }
+        });
     });
 }
 
 function triggerMessageSending(matchId) {
-    chrome.storage.local.get(['savedMessage', 'accessToken'], (data) => {
+    chrome.storage.local.get(['savedMessage', 'accessToken', 'extensionEnabled'], (data) => {
+        if (!data.extensionEnabled) {
+            console.log('Extension is disabled. Message will not be sent.');
+            return;
+        }
+
         const message = data.savedMessage || '';
         const roomId = `match-${matchId}`;
 
@@ -94,7 +113,12 @@ function triggerMessageSending(matchId) {
 
 function refreshAccessToken() {
     loadSettings(settings => {
-        chrome.storage.local.get(['refreshToken'], (data) => {
+        chrome.storage.local.get(['refreshToken', 'extensionEnabled'], (data) => {
+            if (!data.extensionEnabled) {
+                console.log('Extension is disabled. Token refresh will not proceed.');
+                return;
+            }
+
             const refreshToken = data.refreshToken;
 
             if (!refreshToken) {
