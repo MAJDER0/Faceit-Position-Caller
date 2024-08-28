@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const toggleExtensionButton = document.getElementById('toggleExtension');
     const messageInfo = document.getElementById('messageInfo');
     const messagePlayerInfo = document.getElementById('messagePlayerInfo');
-    const extensionState = document.getElementById('extensionState'); // Reference to the extension state element
+    const extensionState = document.getElementById('extensionState');
     const bodyElement = document.body;
 
     // Function to update the UI based on the login status
@@ -18,8 +18,8 @@ document.addEventListener('DOMContentLoaded', function () {
             messageContainer.style.display = 'block';
 
             // Increase the width and height by 50px
-            bodyElement.style.width = '500px';
-            bodyElement.style.height = '350px';
+            bodyElement.style.width = '520px';
+            bodyElement.style.height = '400px';
 
             // Load the saved message, user info, and toggle state from local storage
             chrome.storage.local.get(['savedMessage', 'nickname', 'country', 'extensionEnabled'], (data) => {
@@ -29,15 +29,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.nickname && data.country) {
                     messagePlayerInfo.innerHTML = `Hello, ${data.nickname} <img class="flague" src="https://flagsapi.com/${data.country.toUpperCase()}/shiny/64.png" width="22px" height="22px">`;
                 } else {
-                    console.error("Nickname or country is missing from local storage.");
+                    messagePlayerInfo.innerHTML = 'Hello'; // Default message if nickname or country is missing
                 }
 
                 // Set the extension state display with space
-                if (data.extensionEnabled) {
-                    extensionState.innerHTML = '<span style="color: #6BBE49;">Enabled</span>';
-                } else {
-                    extensionState.innerHTML = '<span style="color: #F20707;">Disabled</span>';
-                }
+                extensionState.innerHTML = data.extensionEnabled
+                    ? '<span style="color: #6BBE49;">Enabled</span>'
+                    : '<span style="color: #F20707;">Disabled</span>';
 
                 // Set the initial state of the toggle button (reversed logic)
                 toggleExtensionButton.querySelector('span').textContent = data.extensionEnabled ? 'OFF' : 'ON';
@@ -78,11 +76,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 messageInput.value = changes.savedMessage.newValue || '';
             }
             if (changes.extensionEnabled) {
-                if (changes.extensionEnabled.newValue) {
-                    extensionState.innerHTML = '<span style="color: #6BBE49;">Enabled</span>';
-                } else {
-                    extensionState.innerHTML = '<span style="color: #F20707;">Disabled</span>';
-                }
+                extensionState.innerHTML = changes.extensionEnabled.newValue
+                    ? '<span style="color: #6BBE49;">Enabled</span>'
+                    : '<span style="color: #F20707;">Disabled</span>';
             }
         }
     });
@@ -110,13 +106,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     logoutButton.addEventListener('click', function () {
-        // Clear all data from local storage
-        chrome.storage.local.clear(function () {
+        // Clear all data from local storage including nickname
+        chrome.storage.local.remove(['nickname', 'savedMessage', 'country', 'accessToken', 'refreshToken'], function () {
             console.log('Local storage cleared.');
             // Reset the UI to the login screen
             updateUI(false);
         });
     });
+
 
     toggleExtensionButton.addEventListener('click', function () {
         // Toggle the extension functionality
@@ -125,41 +122,14 @@ document.addEventListener('DOMContentLoaded', function () {
             chrome.storage.local.set({ 'extensionEnabled': newState }, function () {
                 toggleExtensionButton.querySelector('span').textContent = newState ? 'OFF' : 'ON';
                 console.log('Extension state set to:', newState ? 'Enabled' : 'Disabled');
-                extensionState.innerHTML = newState ? '<span style="color: #6BBE49;">Enabled</span>' : '<span style="color: #F20707;">Disabled</span>';
+                extensionState.innerHTML = newState
+                    ? '<span style="color: #6BBE49;">Enabled</span>'
+                    : '<span style="color: #F20707;">Disabled</span>';
             });
         });
     });
 
-    // Handle Enter key press to add 46 spaces at the end of the first line and move to the next line
-    messageInput.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter') {
-            event.preventDefault(); // Prevent the default action of moving to the next line
-
-            const currentText = messageInput.value;
-            const caretPosition = messageInput.selectionStart;
-            const beforeCaret = currentText.substring(0, caretPosition);
-            const afterCaret = currentText.substring(caretPosition);
-
-            // Find the first newline character or end of text
-            const firstLineEnd = beforeCaret.indexOf('\n') !== -1 ? beforeCaret.indexOf('\n') : beforeCaret.length;
-
-            // Get the first line and the rest of the text
-            const firstLine = beforeCaret.substring(0, firstLineEnd);
-            const restOfText = beforeCaret.substring(firstLineEnd) + afterCaret;
-
-            // Add 46 spaces to the end of the first line if they are not already present
-            const paddedFirstLine = firstLine + ' '.repeat(Math.max(0, 46 - (firstLine.length % 46)));
-
-            // Combine the padded first line with the rest of the text
-            const newText = paddedFirstLine + '\n' + restOfText;
-
-            // Set the new value in the text box
-            messageInput.value = newText;
-
-            // Move the caret to the start of the new line
-            messageInput.selectionStart = messageInput.selectionEnd = paddedFirstLine.length + 1;
-        }
-    });
+    // No custom handling of Enter key needed for textarea
 });
 
 function animateInfoText() {
@@ -230,14 +200,14 @@ function animateMessageText() {
                 if (messageElement.textContent.endsWith(cursor)) {
                     messageElement.textContent = messageText; // Remove cursor and show full text
                 } else {
-                    messageElement.textContent = messageText + cursor; // Add cursor
+                    messageElement.textContent = messageText + cursor;
                 }
-                blinkMessageCursor(blinkCount + 1); // Recursively call the function to count the blinks
-            }, 500); // Adjust the speed of blinking here
+                blinkMessageCursor(blinkCount + 1);
+            }, 500);
         } else {
-            messageElement.textContent = messageText; // Ensure the full text is displayed without the cursor after the final blink
+            messageElement.textContent = messageText;
         }
     }
 
-    typeMessage(); // Start typing immediately
+    typeMessage();
 }

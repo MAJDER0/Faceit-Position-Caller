@@ -146,19 +146,22 @@ input {
 }
 
 #message {
-    width: 100%;
+    width: 100%; /* Matches the width of the button */
     padding: 10px;
     border-radius: 5px;
     border: none;
     background-color: #333333;
     color: #F2F2F2;
+    height: 65px; /* Fixed height */
+    box-sizing: border-box; /* Ensure padding and border are included in the width and height */
+    resize: none; /* Prevent resizing */
 }
 
 #messageInfo {
     display: flex;
     text-align: center;
     margin-top: -5%;
-    margin-bottom: 10%;
+    margin-bottom: 6%;
     line-height: 1.5;
 }
 
@@ -201,21 +204,18 @@ input {
     display: flex;
     justify-content: center;
     margin-top: 2%;
-    width: 100%;
+    width: 100%; /* Matches the width of the textarea */
     border-top: none;
     border-bottom: none;
     border-right: none;
     margin-left: auto;
     margin-right: auto;
-}
-
-#message {
-    height: 50px; 
+    box-sizing: border-box; /* Ensure padding and border are included in the width */
 }
 
 #extensionState {
     display: flex;
     justify-content: center;
-    margin-bottom:10%;
-    font-size:16px;
+    margin-bottom: 10%;
+    font-size: 16px;
 }
