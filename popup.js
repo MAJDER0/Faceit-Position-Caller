@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const messagePlayerInfo = document.getElementById('messagePlayerInfo');
     const extensionState = document.getElementById('extensionState');
     const bodyElement = document.body;
+    const positionItems = document.querySelectorAll('.Position-item');
 
     // Function to update the UI based on the login status
     function updateUI(isLoggedIn) {
@@ -17,46 +18,50 @@ document.addEventListener('DOMContentLoaded', function () {
             loginContainer.style.display = 'none';
             messageContainer.style.display = 'block';
 
-            // Increase the width and height by 50px
-            bodyElement.style.width = '520px';
-            bodyElement.style.height = '400px';
+            bodyElement.style.width = '560px';
+            bodyElement.style.height = '440px';
 
-            // Load the saved message, user info, and toggle state from local storage
             chrome.storage.local.get(['savedMessage', 'nickname', 'country', 'extensionEnabled'], (data) => {
                 messageInput.value = data.savedMessage || '';
 
-                // Display the user's nickname and country flag
                 if (data.nickname && data.country) {
                     messagePlayerInfo.innerHTML = `Hello, ${data.nickname} <img class="flague" src="https://flagsapi.com/${data.country.toUpperCase()}/shiny/64.png" width="22px" height="22px">`;
                 } else {
-                    messagePlayerInfo.innerHTML = 'Hello'; // Default message if nickname or country is missing
+                    messagePlayerInfo.innerHTML = 'Welcome to Faceit Position Caller';
                 }
 
-                // Set the extension state display with space
                 extensionState.innerHTML = data.extensionEnabled
                     ? '<span style="color: #6BBE49;">Enabled</span>'
                     : '<span style="color: #F20707;">Disabled</span>';
 
-                // Set the initial state of the toggle button (reversed logic)
                 toggleExtensionButton.querySelector('span').textContent = data.extensionEnabled ? 'OFF' : 'ON';
 
-                animateMessageText(); // Trigger the second animation when the message is displayed
+                // Ensure this is called after setting up the UI elements
+                animateMessageText();
             });
         } else {
             loginContainer.style.display = 'block';
             messageContainer.style.display = 'none';
 
-            // Reset the width and height to the original size
             bodyElement.style.width = '420px';
             bodyElement.style.height = '270px';
 
-            animateInfoText(); // Trigger the first animation on initial load
+            animateInfoText();
         }
+    }
+
+    // Save the message to local storage
+    function saveMessage(message) {
+        chrome.storage.local.set({
+            'savedMessage': message
+        }, () => {
+            console.log('Saved message to local storage:', message);
+            chrome.runtime.sendMessage({ action: 'updateSavedMessage', savedMessage: message });
+        });
     }
 
     // Check if user is already logged in
     chrome.storage.local.get(['accessToken', 'extensionEnabled'], function (data) {
-        // If extensionEnabled is undefined, set it to true (default ON state)
         if (data.extensionEnabled === undefined) {
             chrome.storage.local.set({ extensionEnabled: true }, function () {
                 updateUI(!!data.accessToken);
@@ -66,7 +71,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Listen for changes in storage to dynamically update the UI
     chrome.storage.onChanged.addListener(function (changes, areaName) {
         if (areaName === 'local') {
             if (changes.accessToken) {
@@ -84,7 +88,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     loginButton.addEventListener('click', () => {
-        // Send a message to the background script to start the OAuth2 flow
         chrome.runtime.sendMessage({ action: 'startOAuth2' });
     });
 
@@ -94,34 +97,24 @@ document.addEventListener('DOMContentLoaded', function () {
         messageInput.focus();
         changeButton.querySelector('span').textContent = isDisabled ? 'SAVE' : 'ENTER A MESSAGE';
 
-        if (!isDisabled) { // Save mode
+        if (!isDisabled) {
             const savedMessage = messageInput.value;
-            chrome.storage.local.set({
-                'savedMessage': savedMessage
-            }, () => {
-                console.log('Saved message to local storage:', savedMessage);
-                chrome.runtime.sendMessage({ action: 'updateSavedMessage', savedMessage: savedMessage });
-            });
+            saveMessage(savedMessage);
         }
     });
 
     logoutButton.addEventListener('click', function () {
-        // Clear all data from local storage including nickname
         chrome.storage.local.remove(['nickname', 'savedMessage', 'country', 'accessToken', 'refreshToken'], function () {
             console.log('Local storage cleared.');
-            // Reset the UI to the login screen
             updateUI(false);
         });
     });
 
-
     toggleExtensionButton.addEventListener('click', function () {
-        // Toggle the extension functionality
         chrome.storage.local.get('extensionEnabled', function (data) {
             const newState = !data.extensionEnabled;
             chrome.storage.local.set({ 'extensionEnabled': newState }, function () {
                 toggleExtensionButton.querySelector('span').textContent = newState ? 'OFF' : 'ON';
-                console.log('Extension state set to:', newState ? 'Enabled' : 'Disabled');
                 extensionState.innerHTML = newState
                     ? '<span style="color: #6BBE49;">Enabled</span>'
                     : '<span style="color: #F20707;">Disabled</span>';
@@ -129,7 +122,25 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // No custom handling of Enter key needed for textarea
+    // Add event listeners to each Position-item
+    positionItems.forEach(item => {
+        item.addEventListener('click', function () {
+            // Extract the position name by removing the leading "+ " from the text
+            const positionText = item.textContent.trim().replace(/^\+\s*/, '');
+
+            // Check if there's already text in the textarea
+            if (messageInput.value.trim() === '') {
+                messageInput.value = positionText;
+            } else {
+                messageInput.value += ` ${positionText}`;
+            }
+            saveMessage(messageInput.value.trim());
+        });
+    });
+
+    // Initial animations
+    animateInfoText();
+    animateMessageText();  // Ensure this is called at the start
 });
 
 function animateInfoText() {

@@ -44,7 +44,7 @@
               "RelativeDocumentMoniker": "popup.css",
               "ToolTip": "C:\\Users\\Majderki\\source\\repos\\Faceit-Position-Caller-Extension\\popup.css",
               "RelativeToolTip": "popup.css",
-              "ViewState": "AQIAALsAAAAAAAAAAAAAANMAAAAXAAAA",
+              "ViewState": "AQIAALsAAAAAAAAAAAAAAN8AAAATAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
               "WhenOpened": "2024-08-28T19:32:55.269Z",
               "EditorCaption": ""
@@ -57,7 +57,7 @@
               "RelativeDocumentMoniker": "popup.html",
               "ToolTip": "C:\\Users\\Majderki\\source\\repos\\Faceit-Position-Caller-Extension\\popup.html",
               "RelativeToolTip": "popup.html",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAB4AAAAAAAAA",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAABEAAAAaAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
               "WhenOpened": "2024-08-28T19:32:55.271Z",
               "EditorCaption": ""
@@ -72,8 +72,7 @@
               "RelativeToolTip": "popup.js",
               "ViewState": "AQIAAK4AAAAAAAAAAAAswNUAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2024-08-28T19:32:55.272Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-08-28T19:32:55.272Z"
             },
             {
               "$type": "Document",
@@ -85,8 +84,7 @@
               "RelativeToolTip": "background.js",
               "ViewState": "AQIAAFUBAAAAAAAAAAAcwH8BAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2024-08-28T19:32:55.275Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-08-28T19:32:55.275Z"
             },
             {
               "$type": "Document",
@@ -98,8 +96,7 @@
               "RelativeToolTip": "server.js",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAABcAAAA+AAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2024-08-28T19:32:55.276Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-08-28T19:32:55.276Z"
             }
           ]
         }
