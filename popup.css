@@ -12,6 +12,7 @@ body {
     letter-spacing: 1.5px;
     color: #F2F2F2;
     font-family: 'Play', sans-serif;
+    position: relative; 
 }
 
 #login-container {
@@ -132,7 +133,7 @@ input {
     text-align: center;
     line-height: 1.5;
     width: 100%;
-    margin-top: -1%;
+    margin-top: 5%;
     margin-bottom: 3%;
 }
 
@@ -170,6 +171,7 @@ input {
     justify-content: center;
     text-align: center;
     margin-bottom: 1%;
+    margin-top: 2%;
     font-size: 17px;
     height: 40px; /* Fixed height to prevent movement */
     overflow: hidden;
@@ -186,7 +188,7 @@ input {
     border-right: none;
     border-top: none;
     border-bottom: none;
-    margin-top: 5%;
+    margin-top: 3%;
     margin-right: 5%;
 }
 
@@ -196,14 +198,14 @@ input {
     border-right: none;
     border-top: none;
     border-bottom: none;
-    margin-top: 5%;
+    margin-top: 3%;
     margin-left: 5%;
 }
 
 #change {
     display: flex;
     justify-content: center;
-    margin-top: 2%;
+    margin-top: 2.5%;
     width: 100%; /* Matches the width of the textarea */
     border-top: none;
     border-bottom: none;
@@ -232,6 +234,56 @@ input {
 }
 
     .Position-item:hover {
-        background-color: #1a1a1a;
-        cursor:pointer;
+        background-color: #272727;
+        cursor: pointer;
     }
+
+
+#distribution-text {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    font-size: 11px;
+    color: #7393B3;
+    opacity: 0.7;
+}
+
+    #distribution-text a {
+        text-decoration: none;
+        color: #7393B3;
+    }
+
+        #distribution-text a:hover {
+            background-color: #272727;
+        }
+
+#FAQ-text:hover {
+    background-color: #272727;
+    cursor: pointer;
+}
+
+    #FAQ-text {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        font-size: 11px;
+        color: #7393B3;
+        opacity: 0.7;
+    }
+
+@font-face {
+    font-family: 'Elemental End';
+    src: url('fonts/ElementalEnd.ttf') format('truetype'),;
+    font-weight: 100;
+    font-style: normal;
+}
+
+#logo {
+    position: absolute;
+    top: 10%;
+    color: RGB(224, 17, 95);
+    font-family: 'Elemental End', sans-serif;
+    font-size: 15.5px;
+    letter-spacing: 6px;
+    font-weight: 100; /* Change to a lighter weight if needed */
+}

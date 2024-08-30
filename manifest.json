@@ -33,7 +33,11 @@
   },
   "web_accessible_resources": [
     {
-      "resources": [ "libs/socket.io.min.js" ],
+      "resources": [
+        "libs/socket.io.min.js",
+        "fonts/ElementalEnd.woff2",
+        "fonts/ElementalEnd.woff"
+      ],
       "matches": [ "<all_urls>" ]
     }
   ]

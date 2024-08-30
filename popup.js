@@ -11,15 +11,22 @@ document.addEventListener('DOMContentLoaded', function () {
     const extensionState = document.getElementById('extensionState');
     const bodyElement = document.body;
     const positionItems = document.querySelectorAll('.Position-item');
+    const logoElement = document.getElementById('logo');
+    const FAQElement = document.getElementById('FAQ-text');
+    const thirdScreen = document.getElementById('third-screen');
 
     // Function to update the UI based on the login status
     function updateUI(isLoggedIn) {
         if (isLoggedIn) {
             loginContainer.style.display = 'none';
             messageContainer.style.display = 'block';
+            thirdScreen.style.display = 'none'; // Ensure third screen is hidden
 
-            bodyElement.style.width = '560px';
-            bodyElement.style.height = '440px';
+            bodyElement.style.width = '630px';
+            bodyElement.style.height = '525px';
+
+            FAQElement.style.display = 'block';
+            logoElement.style.top = '5%';
 
             chrome.storage.local.get(['savedMessage', 'nickname', 'country', 'extensionEnabled'], (data) => {
                 messageInput.value = data.savedMessage || '';
@@ -27,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.nickname && data.country) {
                     messagePlayerInfo.innerHTML = `Hello, ${data.nickname} <img class="flague" src="https://flagsapi.com/${data.country.toUpperCase()}/shiny/64.png" width="22px" height="22px">`;
                 } else {
-                    messagePlayerInfo.innerHTML = 'Welcome to Faceit Position Caller';
+                    messagePlayerInfo.innerHTML = 'Hello, User';
                 }
 
                 extensionState.innerHTML = data.extensionEnabled
@@ -42,13 +49,30 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             loginContainer.style.display = 'block';
             messageContainer.style.display = 'none';
+            thirdScreen.style.display = 'none'; // Ensure third screen is hidden
 
-            bodyElement.style.width = '420px';
+            bodyElement.style.width = '460px';
             bodyElement.style.height = '270px';
+
+            logoElement.style.top = '10%';
+            FAQElement.style.display = 'none';
 
             animateInfoText();
         }
     }
+
+    // Event listener for the "DETAILS" button
+    FAQElement.addEventListener('click', function () {
+        if (FAQElement.textContent === "DETAILS") {
+            messageContainer.style.display = 'none';
+            thirdScreen.style.display = 'block';
+            FAQElement.textContent = "BACK";
+        } else {
+            thirdScreen.style.display = 'none';
+            messageContainer.style.display = 'block';
+            FAQElement.textContent = "DETAILS";
+        }
+    });
 
     // Save the message to local storage
     function saveMessage(message) {
@@ -117,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 toggleExtensionButton.querySelector('span').textContent = newState ? 'OFF' : 'ON';
                 extensionState.innerHTML = newState
                     ? '<span style="color: #6BBE49;">Enabled</span>'
-                    : '<span style="color: #F20707;">Disabled</span>';
+                    : '<span style="color: #F20707;">Disabled';
             });
         });
     });
