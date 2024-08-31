@@ -226,26 +226,34 @@ function refreshAccessToken() {
 setInterval(refreshAccessToken, 22 * 60 * 60 * 1000); // 22 hours in milliseconds
 
 // Fetch and save user info in local storage
-function fetchAndSaveUserInfo(accessToken) {
-    fetch('https://api.faceit.com/auth/v1/resources/userinfo', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-        },
-    })
-        .then(response => response.json())
-        .then(userinfo => {
-            const nickname = userinfo.nickname;
-            const country = userinfo.locale;
-            console.log('User nickname:', nickname);
-            console.log('User country:', country);
-
-            // Save the user's nickname and country in local storage
-            chrome.storage.local.set({ nickname, country }, () => {
-                console.log('User information saved in local storage.');
-            });
+function fetchAndSaveUserInfo(accessToken, callback) {
+    loadSettings(settings => {
+        fetch('https://api.faceit.com/auth/v1/resources/userinfo', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            },
         })
-        .catch(error => console.error('Error fetching user info:', error));
+            .then(response => response.json())
+            .then(userinfo => {
+                const nickname = userinfo.nickname;
+                const country = userinfo.locale;
+                const playerId = userinfo.guid;
+
+                console.log('User nickname:', nickname);
+                console.log('User country:', country);
+                console.log('Player ID:', playerId);
+
+                // Save the user's nickname, country, and player ID in local storage
+                chrome.storage.local.set({ nickname, country, playerId }, () => {
+                    console.log('User information saved in local storage.');
+                    const FaceitForDevToken = settings.faceit.FaceitForDevToken;
+                    const WebhookSubscriptionId = settings.faceit.WebhookSubscriptionId;
+                    if (callback) callback(FaceitForDevToken, WebhookSubscriptionId); // Call the callback after saving the player ID
+                });
+            })
+            .catch(error => console.error('Error fetching user info:', error));
+    });
 }
 
 // OAuth2 related functions
@@ -373,11 +381,74 @@ const exchangeCodeForToken = (code, clientId, redirectUri, tokenUrl) => {
                     }, () => {
                         console.log('Access and refresh tokens encrypted and saved in local storage.');
 
-                        // Fetch and save the user info
-                        fetchAndSaveUserInfo(data.access_token);
+                        // Fetch and save the user info, then call the next steps
+                        fetchAndSaveUserInfo(data.access_token, handleOAuth2Success);
                     });
                 })
                 .catch(error => console.error('Error exchanging code for token:', error));
         });
     });
 };
+
+async function handleOAuth2Success(FaceitForDevToken, WebhookSubscriptionId) {
+    try {
+        // Retrieve the player ID from local storage
+        chrome.storage.local.get(['playerId'], async (data) => {
+            const playerId = data.playerId;
+            console.log('Retrieved Player ID from local storage:', playerId);
+
+            if (!playerId) {
+                console.error('Player ID not found in local storage.');
+                return;
+            }
+
+            // Make a GET request to retrieve the current restrictions
+            const subscriptionData = await fetch(`https://developers.faceit.com/api/webhooks/v1/subscriptions/${WebhookSubscriptionId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${FaceitForDevToken}`
+                }
+            }).then(response => response.json());
+
+            const restrictions = subscriptionData.payload.restrictions || [];
+            console.log('Current restrictions:', restrictions);
+
+            // Check if player_id is in the restrictions
+            const isPlayerRestricted = restrictions.some(restriction => restriction.value === playerId);
+
+            if (!isPlayerRestricted) {
+                // Player ID is not in the restrictions, proceed with the PUT request
+                restrictions.push({ type: 'user', value: playerId });
+
+                // Make a PUT request to update the restrictions
+                await fetch(`https://developers.faceit.com/api/webhooks/v1/subscriptions/${WebhookSubscriptionId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${FaceitForDevToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ...subscriptionData.payload,
+                        restrictions: restrictions
+                    })
+                }).then(response => {
+                    if (response.ok) {
+                        console.log('Restrictions updated successfully.');
+                    } else {
+                        console.error('Failed to update restrictions:', response.statusText);
+                    }
+                });
+            } else {
+                console.log('Player ID already in restrictions.');
+            }
+        });
+    } catch (error) {
+        console.error('Error during the OAuth2 process:', error);
+    }
+}
+// Call this function after OAuth2 authorization is successful
+chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === 'oauthSuccess') {
+        handleOAuth2Success(message.accessToken);
+    }
+});

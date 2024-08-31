@@ -9,7 +9,10 @@
     "tabs",
     "activeTab",
     "scripting",
-    "webNavigation"
+    "webNavigation",
+    "alarms",
+    "cookies",
+    "webRequest"
   ],
   "host_permissions": [
     "https://*.faceit.com/*",
@@ -20,7 +23,7 @@
   },
   "content_scripts": [
     {
-      "matches": [ "https://*.faceit.com/room/*" ],
+      "matches": [ "https://*.faceit.com/room/*", "https://accounts.faceit.com/*", "https://developers.faceit.com/*" ],
       "js": [ "contentScript.js" ]
     }
   ],
