@@ -234,28 +234,28 @@ function fetchAndSaveUserInfo(accessToken, callback) {
                 'Authorization': `Bearer ${accessToken}`,
             },
         })
-            .then(response => response.json())
-            .then(userinfo => {
-                const nickname = userinfo.nickname;
-                const country = userinfo.locale;
-                const playerId = userinfo.guid;
+        .then(response => response.json())
+        .then(userinfo => {
+            const nickname = userinfo.nickname;
+            const country = userinfo.locale;
+            const playerId = userinfo.guid;
 
-                console.log('User nickname:', nickname);
-                console.log('User country:', country);
-                console.log('Player ID:', playerId);
+            console.log('User nickname:', nickname);
+            console.log('User country:', country);
+            console.log('Player ID:', playerId);
 
-                // Save the user's nickname, country, and player ID in local storage
-                chrome.storage.local.set({ nickname, country, playerId }, () => {
-                    console.log('User information saved in local storage.');
-                    const FaceitForDevToken = settings.faceit.FaceitForDevToken;
-                    const WebhookSubscriptionId = settings.faceit.WebhookSubscriptionId;
-                    if (callback) callback(FaceitForDevToken, WebhookSubscriptionId); // Call the callback after saving the player ID
-                });
-            })
-            .catch(error => console.error('Error fetching user info:', error));
+            // Save the user's nickname, country, and player ID in local storage
+            chrome.storage.local.set({ nickname, country, playerId }, () => {
+                console.log('User information saved in local storage.');
+
+                const FaceitForDevToken = settings.faceit.FaceitForDevToken;
+                const WebhookSubscriptionId = settings.faceit.WebhookSubscriptionId;
+                if (callback) callback(FaceitForDevToken, WebhookSubscriptionId); // Call the callback after saving the player ID
+            });
+        })
+        .catch(error => console.error('Error fetching user info:', error));
     });
 }
-
 // OAuth2 related functions
 function generateCodeVerifier() {
     const array = new Uint32Array(56 / 2);

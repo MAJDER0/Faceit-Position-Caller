@@ -15,12 +15,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const FAQElement = document.getElementById('FAQ-text');
     const thirdScreen = document.getElementById('third-screen');
 
-    // Function to update the UI based on the login status
+    let isThirdScreenVisible = false;  // Track if the third screen is visible
+
     function updateUI(isLoggedIn) {
         if (isLoggedIn) {
             loginContainer.style.display = 'none';
-            messageContainer.style.display = 'block';
-            thirdScreen.style.display = 'none'; // Ensure third screen is hidden
+            messageContainer.style.display = isThirdScreenVisible ? 'none' : 'block';
+            thirdScreen.style.display = isThirdScreenVisible ? 'block' : 'none';
 
             bodyElement.style.width = '630px';
             bodyElement.style.height = '525px';
@@ -33,8 +34,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (data.nickname && data.country) {
                     messagePlayerInfo.innerHTML = `Hello, ${data.nickname} <img class="flague" src="https://flagsapi.com/${data.country.toUpperCase()}/shiny/64.png" width="22px" height="22px">`;
-                } else {
-                    messagePlayerInfo.innerHTML = 'Hello, User';
                 }
 
                 extensionState.innerHTML = data.extensionEnabled
@@ -43,13 +42,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 toggleExtensionButton.querySelector('span').textContent = data.extensionEnabled ? 'OFF' : 'ON';
 
-                // Ensure this is called after setting up the UI elements
                 animateMessageText();
             });
         } else {
             loginContainer.style.display = 'block';
             messageContainer.style.display = 'none';
-            thirdScreen.style.display = 'none'; // Ensure third screen is hidden
+            thirdScreen.style.display = 'none';
 
             bodyElement.style.width = '460px';
             bodyElement.style.height = '270px';
@@ -61,9 +59,22 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Event listener for the "DETAILS" button
+    function checkLoginState() {
+        chrome.storage.local.get(['nickname', 'playerId', 'extensionEnabled'], function (data) {
+            const isLoggedIn = !!data.nickname && !!data.playerId;
+            if (data.extensionEnabled === undefined) {
+                chrome.storage.local.set({ extensionEnabled: true }, function () {
+                    updateUI(isLoggedIn);
+                });
+            } else {
+                updateUI(isLoggedIn);
+            }
+        });
+    }
+
     FAQElement.addEventListener('click', function () {
-        if (FAQElement.textContent === "DETAILS") {
+        isThirdScreenVisible = !isThirdScreenVisible;  // Toggle the third screen visibility
+        if (isThirdScreenVisible) {
             messageContainer.style.display = 'none';
             thirdScreen.style.display = 'block';
             FAQElement.textContent = "BACK";
@@ -74,31 +85,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Save the message to local storage
-    function saveMessage(message) {
-        chrome.storage.local.set({
-            'savedMessage': message
-        }, () => {
-            console.log('Saved message to local storage:', message);
-            chrome.runtime.sendMessage({ action: 'updateSavedMessage', savedMessage: message });
-        });
-    }
-
-    // Check if user is already logged in
-    chrome.storage.local.get(['accessToken', 'extensionEnabled'], function (data) {
-        if (data.extensionEnabled === undefined) {
-            chrome.storage.local.set({ extensionEnabled: true }, function () {
-                updateUI(!!data.accessToken);
-            });
-        } else {
-            updateUI(!!data.accessToken);
-        }
-    });
-
     chrome.storage.onChanged.addListener(function (changes, areaName) {
         if (areaName === 'local') {
-            if (changes.accessToken) {
-                updateUI(!!changes.accessToken.newValue);
+            if (changes.nickname && changes.playerId) {
+                updateUI(!!(changes.nickname.newValue && changes.playerId.newValue));
             }
             if (changes.savedMessage) {
                 messageInput.value = changes.savedMessage.newValue || '';
@@ -123,13 +113,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!isDisabled) {
             const savedMessage = messageInput.value;
-            saveMessage(savedMessage);
+            chrome.storage.local.set({ savedMessage }, () => {
+                console.log('Message saved to local storage:', savedMessage);
+            });
         }
     });
 
     logoutButton.addEventListener('click', function () {
-        chrome.storage.local.remove(['nickname', 'savedMessage', 'country', 'accessToken', 'refreshToken'], function () {
-            console.log('Local storage cleared.');
+        chrome.storage.local.remove(['nickname', 'country', 'accessToken', 'refreshToken', 'playerId'], function () {
+            console.log('Local storage cleared, but savedMessage is intact.');
             updateUI(false);
         });
     });
@@ -141,30 +133,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 toggleExtensionButton.querySelector('span').textContent = newState ? 'OFF' : 'ON';
                 extensionState.innerHTML = newState
                     ? '<span style="color: #6BBE49;">Enabled</span>'
-                    : '<span style="color: #F20707;">Disabled';
+                    : '<span style="color: #F20707;">Disabled</span>';
             });
         });
     });
 
-    // Add event listeners to each Position-item
     positionItems.forEach(item => {
         item.addEventListener('click', function () {
-            // Extract the position name by removing the leading "+ " from the text
             const positionText = item.textContent.trim().replace(/^\+\s*/, '');
 
-            // Check if there's already text in the textarea
             if (messageInput.value.trim() === '') {
                 messageInput.value = positionText;
             } else {
                 messageInput.value += ` ${positionText}`;
             }
-            saveMessage(messageInput.value.trim());
+            chrome.storage.local.set({ savedMessage: messageInput.value.trim() }, () => {
+                console.log('Message updated with position and saved to local storage:', messageInput.value.trim());
+            });
         });
     });
 
-    // Initial animations
     animateInfoText();
-    animateMessageText();  // Ensure this is called at the start
+    animateMessageText();
+
+    checkLoginState(); // Initial check for login state on DOMContentLoaded
 });
 
 function animateInfoText() {
@@ -230,10 +222,10 @@ function animateMessageText() {
     }
 
     function blinkMessageCursor(blinkCount) {
-        if (blinkCount < 4) { // Blink only twice
+        if (blinkCount < 4) {
             setTimeout(function () {
                 if (messageElement.textContent.endsWith(cursor)) {
-                    messageElement.textContent = messageText; // Remove cursor and show full text
+                    messageElement.textContent = messageText;
                 } else {
                     messageElement.textContent = messageText + cursor;
                 }

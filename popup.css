@@ -287,3 +287,22 @@ input {
     letter-spacing: 6px;
     font-weight: 100; /* Change to a lighter weight if needed */
 }
+
+#mapSelector {
+    display: flex;
+    justify-content: center;
+    margin-top:5%;
+    margin-bottom:3%;
+    height: 25px;
+    text-align: center;
+    width: 100%; /* Matches the width of the textarea */
+    border-top: none;
+    border-bottom: none;
+    border-right: none;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box; /* Ensure padding and border are included in the width */
+    background-color: #26262a;
+    border-color: #cc4400;
+    color: #F2F2F2;
+}
