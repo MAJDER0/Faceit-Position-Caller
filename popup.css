@@ -158,6 +158,19 @@ input {
     resize: none; /* Prevent resizing */
 }
 
+
+#messageMap {
+    width: 100%; /* Matches the width of the button */
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    background-color: #333333;
+    color: #F2F2F2;
+    height: 35px; /* Fixed height */
+    box-sizing: border-box; /* Ensure padding and border are included in the width and height */
+    resize: none; /* Prevent resizing */
+}
+
 #messageInfo {
     display: flex;
     text-align: center;

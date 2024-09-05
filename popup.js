@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
             thirdScreen.style.display = isThirdScreenVisible ? 'block' : 'none';
 
             bodyElement.style.width = '630px';
-            bodyElement.style.height = '525px';
+            bodyElement.style.height = '595px';
 
             FAQElement.style.display = 'block';
             logoElement.style.top = '5%';
