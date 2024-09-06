@@ -31,11 +31,10 @@
             <span class="Position-item">+ outside</span>
             <span class="Position-item">+ apps</span>
         </div>
-        <textarea id="message" placeholder="Type your message here..." disabled></textarea>
-        <button id="change"><span>ENTER A MESSAGE</span></button>
-
 
         <select id="mapSelector">
+            <option value="GeneralChat">General chat</option>
+            <option value="TeamChat">Team chat</option>
             <option value="Ancient">Ancient</option>
             <option value="Mirage">Mirage</option>
             <option value="Dust2">Dust2</option>
@@ -45,8 +44,21 @@
             <option value="Nuke">Nuke</option>
         </select>
 
-        <textarea id="messageMap" placeholder="Type your message here..." disabled></textarea>
+        <div id="Clear"><span>clear</span></div>
 
+        <!-- Default textarea for General chat -->
+        <textarea id="message" placeholder="Send your message instantly to the general chat after a match is found..." disabled></textarea>
+
+        <textarea id="TeamChat" placeholder="Send your message to the team chat after a match is found..." style="display: none;" disabled></textarea>
+        <textarea id="Ancient" placeholder="Send your message after Ancient has been picked..." style="display: none;" disabled></textarea>
+        <textarea id="Mirage" placeholder="Send your message after Mirage has been picked..." style="display: none;" disabled></textarea>
+        <textarea id="Dust2" placeholder="Send your message after Dust2 has been picked..." style="display: none;" disabled></textarea>
+        <textarea id="Anubis" placeholder="Send your message after Anubis has been picked..." style="display: none;" disabled></textarea>
+        <textarea id="Inferno" placeholder="Send your message after Inferno has been picked..." style="display: none;" disabled></textarea>
+        <textarea id="Vertigo" placeholder="Send your message after Vertigo has been picked..." style="display: none;" disabled></textarea>
+        <textarea id="Nuke" placeholder="Send your message after Nuke has been picked..." style="display: none;" disabled></textarea>
+
+        <button id="change"><span>ENTER A MESSAGE</span></button>
 
         <div style="display: flex; justify-content: space-between; width: 100%;">
             <button id="logout"><span>LOG OUT</span></button>
