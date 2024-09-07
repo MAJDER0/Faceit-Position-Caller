@@ -30,28 +30,24 @@ app.post('/IsMatchReady', async (req, res) => {
     const event = req.body;
     console.log('Received webhook event:', event);
 
-    if ((event.event && event.event.includes('match_object_created')) || (event.event && event.event === 'match_object_created')) {
+    // Handle match_object_created event
+    if (event.event && event.event === 'match_object_created') {
         const matchId = event.payload.id;
-        console.log('Match status is ready');
+        console.log('Match object created, matchId:', matchId);
         io.emit('matchReady', matchId);
         console.log('Emitted matchReady event with matchId:', matchId);
-
         res.status(200).send('Webhook received');
 
-    } else if ((event.event && event.event.includes('match_status_configuring')) || (event.event && event.event === 'match_status_configuring')) {
-
+        // Handle match_status_configuring event
+    } else if (event.event && event.event === 'match_status_configuring') {
         const matchIdConfiguration = event.payload.id;
-
-        console.log("Configuring Works Properly");
-
+        console.log("Match is configuring with matchId:", matchIdConfiguration);
         io.emit('matchConfiguring', matchIdConfiguration);
-
-        console.log('Emitted match STATUS event with matchId:', matchIdConfiguration);
-
+        console.log('Emitted matchConfiguring event with matchId:', matchIdConfiguration);
         res.status(200).send('Webhook received');
+    } else {
+        res.status(200).send('Event ignored');
     }
-
-
 });
 
 app.post('/saveAccessToken', (req, res) => {

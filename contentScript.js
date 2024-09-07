@@ -1,35 +1,38 @@
-// Listen for the message from background.js
+console.log("Content script loaded and waiting for messages.");
+
+// Listen for messages from the background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log("ContentScript");
+    console.log("Received message in content script:", request);
+
     if (request.action === 'sendMessageToRoom') {
         const messageToSend = request.message;
-
-        // Wait for the text area to appear (dynamic loading can cause issues if it's not ready)
-        const checkInterval = setInterval(() => {
-            const textArea = document.querySelector('textarea[class*="Message team"]');
-            if (textArea) {
-                // Text area found, clear interval and send message
-                clearInterval(checkInterval);
-
-                // Focus the text area and insert the message
-                textArea.focus();
-                textArea.value = messageToSend;
-
-                // Optionally trigger any event if required to simulate user typing (depends on the website)
-                const inputEvent = new Event('input', { bubbles: true });
-                textArea.dispatchEvent(inputEvent);
-
-                console.log('Message sent to text area:', messageToSend);
-                sendResponse({ status: 'Message sent' });
-            }
-        }, 500); // Check every 500ms
-
-        // Set a timeout to stop trying after 10 seconds
-        setTimeout(() => {
-            clearInterval(checkInterval);
-            sendResponse({ status: 'Timeout - textarea not found' });
-        }, 10000); // 10 seconds timeout
+        sendMessageToRoom(messageToSend);
+        sendResponse({ status: 'Message processed' });
     }
 });
 
+function sendMessageToRoom(message) {
+    console.log("Attempting to send message:", message);
 
+    // Select the textarea where the placeholder starts with "Message team"
+    const textArea = document.querySelector('textarea[placeholder^="Message team"]');
+
+    if (textArea) {
+        console.log('Textarea found:', textArea);
+        textArea.focus(); // Ensure the textarea is focused
+        textArea.value = message;
+        textArea.dispatchEvent(new Event('input', { bubbles: true }));
+
+        // Trigger Enter key
+        const enterEvent = new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            keyCode: 13, // Enter key code
+        });
+        textArea.dispatchEvent(enterEvent);
+
+        console.log("Message sent:", message);
+    } else {
+        console.error("Textarea not found");
+    }
+}
