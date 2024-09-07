@@ -21,12 +21,6 @@
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [
-    {
-      "matches": [ "https://*.faceit.com/room/*", "https://accounts.faceit.com/*", "https://developers.faceit.com/*" ],
-      "js": [ "contentScript.js" ]
-    }
-  ],
   "action": {
     "default_icon": {
       "24": "Assets/Faceit_Extension.png"

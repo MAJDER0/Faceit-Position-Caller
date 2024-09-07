@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const loginContainer = document.getElementById('login-container');
     const messageContainer = document.getElementById('message-container');
     const changeButton = document.getElementById('change');
-    const clearButton = document.getElementById('Clear');  // Added clear button reference
+    const clearButton = document.getElementById('Clear');
     const logoutButton = document.getElementById('logout');
     const toggleExtensionButton = document.getElementById('toggleExtension');
     const messagePlayerInfo = document.getElementById('messagePlayerInfo');
@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const thirdScreen = document.getElementById('third-screen');
     const mapSelector = document.getElementById('mapSelector');
 
+    // Textareas for different maps
     const textareas = {
         GeneralChat: document.getElementById('message'),
         TeamChat: document.getElementById('TeamChat'),
@@ -51,6 +52,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     : '<span style="color: #F20707;">Disabled</span>';
 
                 toggleExtensionButton.querySelector('span').textContent = data.extensionEnabled ? 'OFF' : 'ON';
+
+                // Call the animation function
+                animateInfoText();
                 animateMessageText();
             });
         } else {
@@ -63,11 +67,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             logoElement.style.top = '10%';
             FAQElement.style.display = 'none';
-            animateInfoText();
         }
     }
 
-    // Load saved messages for each map from local storage
     function loadSavedMessages() {
         chrome.storage.local.get(Object.keys(textareas), function (data) {
             for (let map in textareas) {
@@ -77,7 +79,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Switch between textareas based on the selected map
     function switchTextarea() {
         const selectedMap = mapSelector.value;
         for (let map in textareas) {
@@ -92,35 +93,36 @@ document.addEventListener('DOMContentLoaded', function () {
     loadSavedMessages();
     switchTextarea();
 
-    // Handle enabling the textarea and saving the message
     changeButton.addEventListener('click', function () {
         const selectedMap = mapSelector.value;
         const currentTextarea = textareas[selectedMap];
         const isDisabled = currentTextarea.disabled;
 
-        currentTextarea.disabled = !isDisabled;  // Toggle disabled state
+        currentTextarea.disabled = !isDisabled;
         currentTextarea.focus();
         changeButton.querySelector('span').textContent = isDisabled ? 'SAVE' : 'ENTER A MESSAGE';
 
-        if (!isDisabled) {  // If textarea was previously enabled, save the message
+        if (!isDisabled) {
             const savedMessage = currentTextarea.value;
-            chrome.storage.local.set({ [selectedMap]: savedMessage }, () => {
-                console.log(`${selectedMap} message saved:`, savedMessage);
+
+            const storageKey = (selectedMap === 'GeneralChat') ? 'savedMessage' : selectedMap;
+            chrome.storage.local.set({ [storageKey]: savedMessage }, () => {
+                console.log(`${storageKey} message saved:`, savedMessage);
             });
         }
     });
 
-    // Clear the visible textarea when Clear is clicked
     clearButton.addEventListener('click', function () {
         const selectedMap = mapSelector.value;
         const currentTextarea = textareas[selectedMap];
-        currentTextarea.value = '';  // Clear the textarea content
-        chrome.storage.local.set({ [selectedMap]: '' }, () => {
-            console.log(`${selectedMap} message cleared.`);
+        currentTextarea.value = '';
+
+        const storageKey = (selectedMap === 'GeneralChat') ? 'savedMessage' : selectedMap;
+        chrome.storage.local.set({ [storageKey]: '' }, () => {
+            console.log(`${storageKey} message cleared.`);
         });
     });
 
-    // Switch the textarea when a new map is selected
     mapSelector.addEventListener('change', switchTextarea);
 
     loginButton.addEventListener('click', () => {
@@ -157,7 +159,9 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 currentTextarea.value += ` ${positionText}`;
             }
-            chrome.storage.local.set({ [selectedMap]: currentTextarea.value.trim() }, () => {
+
+            const storageKey = (selectedMap === 'GeneralChat') ? 'savedMessage' : selectedMap;
+            chrome.storage.local.set({ [storageKey]: currentTextarea.value.trim() }, () => {
                 console.log('Message updated with position and saved to local storage:', currentTextarea.value.trim());
             });
         });
@@ -277,8 +281,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 updateUI(!!(changes.nickname.newValue && changes.playerId.newValue));
             }
             if (changes.savedMessage) {
-                messageInput.value = changes.savedMessage.newValue || '';
+                textareas.GeneralChat.value = changes.savedMessage.newValue || '';
             }
+            Object.keys(textareas).forEach((map) => {
+                if (changes[map]) {
+                    textareas[map].value = changes[map].newValue || '';
+                }
+            });
             if (changes.extensionEnabled) {
                 extensionState.innerHTML = changes.extensionEnabled.newValue
                     ? '<span style="color: #6BBE49;">Enabled</span>'

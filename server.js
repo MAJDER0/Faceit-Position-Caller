@@ -38,7 +38,20 @@ app.post('/IsMatchReady', async (req, res) => {
 
         res.status(200).send('Webhook received');
 
+    } else if ((event.event && event.event.includes('match_status_configuring')) || (event.event && event.event === 'match_status_configuring')) {
+
+        const matchIdConfiguration = event.payload.id;
+
+        console.log("Configuring Works Properly");
+
+        io.emit('matchConfiguring', matchIdConfiguration);
+
+        console.log('Emitted match STATUS event with matchId:', matchIdConfiguration);
+
+        res.status(200).send('Webhook received');
     }
+
+
 });
 
 app.post('/saveAccessToken', (req, res) => {
