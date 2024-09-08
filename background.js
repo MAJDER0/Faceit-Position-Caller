@@ -1,12 +1,22 @@
 // Console log to indicate the background script is running
 console.log('Background script is running.');
 
-// Load settings from appsettings.json
+// Caching settings for better performance
+let cachedSettings = null;
+
+// Load settings from appsettings.json with caching to avoid redundant loads
 function loadSettings(callback) {
-    fetch(chrome.runtime.getURL('appsettings.json'))
-        .then(response => response.json())
-        .then(json => callback(json))
-        .catch(error => console.error('Error loading settings:', error));
+    if (cachedSettings) {
+        callback(cachedSettings);
+    } else {
+        fetch(chrome.runtime.getURL('appsettings.json'))
+            .then(response => response.json())
+            .then(json => {
+                cachedSettings = json;
+                callback(json);
+            })
+            .catch(error => console.error('Error loading settings:', error));
+    }
 }
 
 // Encryption function using the Web Crypto API
@@ -78,9 +88,8 @@ async function getMatchDetails(matchId, callback) {
                 const mapPick = matchData?.voting?.map?.pick[0] || '';
                 console.log('Map Pick:', mapPick);
 
-                // Log the retrieved map and handle match configuration
                 if (mapPick) {
-                    fetchMessageForMap(mapPick); // Logic for handling configured match
+                    fetchMessageForMap(mapPick);
                 }
                 if (callback) callback(mapPick); // Trigger callback if provided
             } else {
@@ -99,7 +108,6 @@ function fetchMessageForMap(mapPick) {
         return;
     }
 
-    // Map the "de_" map names to text area IDs
     const mapTextAreas = {
         "de_ancient": "Ancient",
         "de_mirage": "Mirage",
@@ -113,12 +121,10 @@ function fetchMessageForMap(mapPick) {
     const textAreaId = mapTextAreas[mapPick];
 
     if (textAreaId) {
-        // Retrieve the message from local storage for the respective map
         chrome.storage.local.get(textAreaId, (data) => {
             const message = data[textAreaId] || '';
             console.log(`Message for ${textAreaId}:`, message);
 
-            // Pass the matchId and message to the next function
             chrome.storage.local.get('matchId', (storedData) => {
                 const matchId = storedData.matchId;
                 checkForMatchRoomTabAndSendMessage(matchId, message);
@@ -129,24 +135,20 @@ function fetchMessageForMap(mapPick) {
     }
 }
 
+// Optimized function to check for the match room tab and send a message
 function checkForMatchRoomTabAndSendMessage(matchId, messageToSend) {
-    const matchRoomUrlPattern = `/room/${matchId}`;
+    chrome.storage.local.get(['extensionEnabled', 'CurrentTabId'], (data) => {
+        if (!data.extensionEnabled) {
+            console.log('Extension is disabled. Stopping match room check.');
+            return;
+        }
 
-    chrome.tabs.query({}, (tabs) => {
-        let matchTabId = null;
-
-        tabs.forEach(tab => {
-            console.log('Checking tab URL:', tab.url);
-
-            if (tab.url && tab.url.includes(matchRoomUrlPattern)) {
-                matchTabId = tab.id;
-                console.log('Match room tab found:', tab.url);
-            }
-        });
+        const matchTabId = data.CurrentTabId;
 
         if (matchTabId) {
-            console.log('Attempting to inject content script into tab:', matchTabId);
+            console.log('Found CurrentTabId:', matchTabId);
 
+            console.log('Attempting to inject content script into tab:', matchTabId);
             chrome.scripting.executeScript({
                 target: { tabId: matchTabId },
                 files: ['contentScript.js']
@@ -163,7 +165,7 @@ function checkForMatchRoomTabAndSendMessage(matchId, messageToSend) {
                 console.error('Error injecting content script:', error);
             });
         } else {
-            console.log('Match room tab not found.');
+            console.error('CurrentTabId not found in local storage.');
         }
     });
 }
@@ -189,7 +191,6 @@ try {
         console.error('Connection error:', error.message);
     });
 
-    // Handle match object creation event
     socket.on('matchReady', (matchId) => {
         chrome.storage.local.get('extensionEnabled', (data) => {
             if (data.extensionEnabled) {
@@ -204,14 +205,13 @@ try {
         });
     });
 
-    // Handle match configuration event
     socket.on('matchConfiguring', async () => {
         console.log('Received matchConfiguring event');
         chrome.storage.local.get('matchId', (data) => {
             const matchId = data.matchId;
             if (matchId) {
                 console.log('Fetching match details for matchId:', matchId);
-                getMatchDetails(matchId); // Fetch match details and log the map pick
+                getMatchDetails(matchId);
             } else {
                 console.error('Match ID not found in local storage');
             }
@@ -223,41 +223,79 @@ try {
 }
 
 function checkForMatchRoomTab(matchId, attempts = 0) {
-    const maxAttempts = 40; // 40 attempts with 1 second interval = 40 seconds
+    const maxAttempts = 160;
     const matchRoomUrlPattern = `/cs2/room/${matchId}`;
 
     console.log('Checking for match room links containing:', matchRoomUrlPattern);
 
-    chrome.storage.local.get('extensionEnabled', (data) => {
+    chrome.storage.local.get(['extensionEnabled', 'TeamChat'], (data) => {
         if (!data.extensionEnabled) {
             console.log('Extension is disabled. Stopping match room check.');
             return;
         }
 
         chrome.tabs.query({}, (tabs) => {
-            let matchTabFound = false;
+            let matchTabId = null;
 
             for (let tab of tabs) {
                 if (tab.url && tab.url.includes(matchRoomUrlPattern)) {
                     console.log('Match room tab found:', tab.url);
+                    matchTabId = tab.id;
+
+                    // Save the matchTabId to local storage
+                    chrome.storage.local.set({ CurrentTabId: matchTabId }, () => {
+                        console.log('CurrentTabId saved in local storage:', matchTabId);
+                    });
+
+                    // Send general chat message
                     triggerMessageSending(matchId);
-                    matchTabFound = true;
+
+                    // Send team chat message if there's one in the TeamChat textarea
+                    const teamChatMessage = data.TeamChat || '';
+                    if (teamChatMessage) {
+                        sendTeamChatMessage(matchTabId, teamChatMessage);
+                    }
+
                     break;
                 }
             }
 
-            if (!matchTabFound && attempts < maxAttempts) {
+            if (matchTabId) {
+                console.log('Match room tab found, stopping further attempts.');
+                return;
+            }
+
+            if (attempts < maxAttempts) {
                 setTimeout(() => {
                     console.log(`Attempt ${attempts + 1} to find match room tab...`);
                     checkForMatchRoomTab(matchId, attempts + 1);
-                }, 1000); // Retry every 1 second
-            } else if (!matchTabFound) {
-                console.log('Match room tab not found after 40 attempts (40 seconds).');
+                }, 250);
+            } else {
+                console.log('Match room tab not found after 160 attempts.');
             }
         });
     });
 }
 
+// Function to send a message to the team chat
+function sendTeamChatMessage(matchTabId, message) {
+    chrome.scripting.executeScript({
+        target: { tabId: matchTabId },
+        files: ['contentScript.js']
+    }).then(() => {
+        chrome.tabs.sendMessage(matchTabId, { action: 'sendMessageToTeamChat', message: message }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error('Error sending team chat message:', chrome.runtime.lastError);
+            } else {
+                console.log('Team chat message successfully sent:', response);
+            }
+        });
+    }).catch((error) => {
+        console.error('Error injecting content script for team chat:', error);
+    });
+}
+
+// Function to trigger general chat message sending
 function triggerMessageSending(matchId) {
     chrome.storage.local.get(['GeneralChat', 'accessToken', 'extensionEnabled'], async (data) => {
         if (!data.extensionEnabled) {
@@ -288,7 +326,7 @@ function triggerMessageSending(matchId) {
     });
 }
 
-
+// Function to refresh access token
 function refreshAccessToken() {
     loadSettings(settings => {
         chrome.storage.local.get(['refreshToken', 'extensionEnabled'], async (data) => {
@@ -297,7 +335,6 @@ function refreshAccessToken() {
                 return;
             }
 
-            // Decrypt the refresh token before using it
             const { ciphertext, iv, key } = data.refreshToken;
             const decryptedRefreshToken = await decryptToken(ciphertext, iv, key);
 
@@ -343,10 +380,10 @@ function refreshAccessToken() {
     });
 }
 
-// Call this function periodically, e.g., every 22 hours to refresh the token before it expires
+// Set interval to refresh access token every 22 hours
 setInterval(refreshAccessToken, 22 * 60 * 60 * 1000);
 
-// Fetch and save user info in local storage
+// Function to fetch and save user info in local storage
 function fetchAndSaveUserInfo(accessToken, callback) {
     loadSettings(settings => {
         fetch('https://api.faceit.com/auth/v1/resources/userinfo', {
@@ -361,10 +398,6 @@ function fetchAndSaveUserInfo(accessToken, callback) {
                 const country = userinfo.locale;
                 const playerId = userinfo.guid;
 
-                console.log('User nickname:', nickname);
-                console.log('User country:', country);
-                console.log('Player ID:', playerId);
-
                 chrome.storage.local.set({ nickname, country, playerId }, () => {
                     console.log('User information saved in local storage.');
 
@@ -376,7 +409,8 @@ function fetchAndSaveUserInfo(accessToken, callback) {
             .catch(error => console.error('Error fetching user info:', error));
     });
 }
-// OAuth2 related functions
+
+// OAuth2 flow related functions
 function generateCodeVerifier() {
     const array = new Uint32Array(56 / 2);
     crypto.getRandomValues(array);
@@ -391,7 +425,6 @@ function generateCodeChallenge(verifier) {
         });
 }
 
-// Start the OAuth2 flow
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'startOAuth2') {
         console.log('Starting OAuth2 flow...');
@@ -406,7 +439,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         url: `${authUrl}?response_type=code&client_id=${clientId}&state=state&scope=openid%20email%20membership%20profile%20chat.messages.read%20chat.messages.write%20chat.rooms.read&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${codeChallenge}&code_challenge_method=S256&redirect_popup=true`,
                         interactive: true
                     }, function (redirectUrl) {
-                        console.log('OAuth2 callback function invoked');
                         if (chrome.runtime.lastError) {
                             console.error('OAuth2 flow failed:', chrome.runtime.lastError);
                             return;
@@ -417,19 +449,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             return;
                         }
 
-                        console.log("Received redirect URL:", redirectUrl);
-
-                        try {
-                            const urlParams = new URLSearchParams(new URL(redirectUrl).search);
-                            const code = urlParams.get('code');
-                            if (code) {
-                                console.log('Authorization code received:', code);
-                                exchangeCodeForToken(code, clientId, redirectUri, tokenUrl);
-                            } else {
-                                console.error('No authorization code found in redirect URL.');
-                            }
-                        } catch (error) {
-                            console.error('Error parsing redirect URL:', error);
+                        const urlParams = new URLSearchParams(new URL(redirectUrl).search);
+                        const code = urlParams.get('code');
+                        if (code) {
+                            exchangeCodeForToken(code, clientId, redirectUri, tokenUrl);
+                        } else {
+                            console.error('No authorization code found in redirect URL.');
                         }
                     });
                 });
@@ -438,15 +463,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.action === 'updateSavedMessage') {
-        console.log('Updated saved message:', message.savedMessage);
         chrome.storage.local.set({ savedMessage: message.savedMessage }, () => {
             sendResponse({ status: 'saved' });
         });
-        return true; // Required to send a response asynchronously
+        return true;
     }
 });
 
-// Exchange the authorization code for an access token
+// Exchange authorization code for access token
 const exchangeCodeForToken = (code, clientId, redirectUri, tokenUrl) => {
     loadSettings(settings => {
         const clientSecret = settings.faceit.clientSecret;
@@ -477,31 +501,15 @@ const exchangeCodeForToken = (code, clientId, redirectUri, tokenUrl) => {
                 },
                 body: params.toString(),
             })
-                .then(response => {
-                    console.log('Full response:', response); // Log the entire response
-                    if (!response.ok) {
-                        return response.text().then(text => {
-                            console.error(`Error response body: ${text}`);
-                            throw new Error(`HTTP error! Status: ${response.status}`);
-                        });
-                    }
-                    return response.json(); // Parse the response as JSON
-                })
+                .then(response => response.json())
                 .then(async data => {
-                    console.log('Access token received:', data.access_token);
-
-                    // Encrypt the access token before storing
                     const encryptedAccessToken = await encryptToken(data.access_token);
                     const encryptedRefreshToken = await encryptToken(data.refresh_token);
 
-                    // Save the encrypted access token and refresh token in local storage
                     chrome.storage.local.set({
                         accessToken: encryptedAccessToken,
                         refreshToken: encryptedRefreshToken
                     }, () => {
-                        console.log('Access and refresh tokens encrypted and saved in local storage.');
-
-                        // Fetch and save the user info, then call the next steps
                         fetchAndSaveUserInfo(data.access_token, handleOAuth2Success);
                     });
                 })
@@ -510,19 +518,17 @@ const exchangeCodeForToken = (code, clientId, redirectUri, tokenUrl) => {
     });
 };
 
+// OAuth2 success handling
 async function handleOAuth2Success(FaceitForDevToken, WebhookSubscriptionId) {
     try {
-        // Retrieve the player ID from local storage
         chrome.storage.local.get(['playerId'], async (data) => {
             const playerId = data.playerId;
-            console.log('Retrieved Player ID from local storage:', playerId);
 
             if (!playerId) {
                 console.error('Player ID not found in local storage.');
                 return;
             }
 
-            // Make a GET request to retrieve the current restrictions
             const subscriptionData = await fetch(`https://developers.faceit.com/api/webhooks/v1/subscriptions/${WebhookSubscriptionId}`, {
                 method: 'GET',
                 headers: {
@@ -531,16 +537,12 @@ async function handleOAuth2Success(FaceitForDevToken, WebhookSubscriptionId) {
             }).then(response => response.json());
 
             const restrictions = subscriptionData.payload.restrictions || [];
-            console.log('Current restrictions:', restrictions);
 
-            // Check if player_id is in the restrictions
             const isPlayerRestricted = restrictions.some(restriction => restriction.value === playerId);
 
             if (!isPlayerRestricted) {
-                // Player ID is not in the restrictions, proceed with the PUT request
                 restrictions.push({ type: 'user', value: playerId });
 
-                // Make a PUT request to update the restrictions
                 await fetch(`https://developers.faceit.com/api/webhooks/v1/subscriptions/${WebhookSubscriptionId}`, {
                     method: 'PUT',
                     headers: {
@@ -566,7 +568,7 @@ async function handleOAuth2Success(FaceitForDevToken, WebhookSubscriptionId) {
         console.error('Error during the OAuth2 process:', error);
     }
 }
-// Call this function after OAuth2 authorization is successful
+
 chrome.runtime.onMessage.addListener((message) => {
     if (message.action === 'oauthSuccess') {
         handleOAuth2Success(message.accessToken);

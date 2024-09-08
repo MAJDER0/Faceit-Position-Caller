@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let isThirdScreenVisible = false;
 
-    function updateUI(isLoggedIn) {
+    function updateUI(isLoggedIn, extensionEnabled) {
         if (isLoggedIn) {
             loginContainer.style.display = 'none';
             messageContainer.style.display = isThirdScreenVisible ? 'none' : 'block';
@@ -42,18 +42,20 @@ document.addEventListener('DOMContentLoaded', function () {
             FAQElement.style.display = 'block';
             logoElement.style.top = '5%';
 
-            chrome.storage.local.get(['nickname', 'country', 'extensionEnabled'], (data) => {
+            // Disable or enable the UI elements based on the extensionEnabled state
+            toggleUIElements(extensionEnabled);
+
+            chrome.storage.local.get(['nickname', 'country'], (data) => {
                 if (data.nickname && data.country) {
                     messagePlayerInfo.innerHTML = `Hello, ${data.nickname} <img class="flague" src="https://flagsapi.com/${data.country.toUpperCase()}/shiny/64.png" width="22px" height="22px">`;
                 }
 
-                extensionState.innerHTML = data.extensionEnabled
+                extensionState.innerHTML = extensionEnabled
                     ? '<span style="color: #6BBE49;">Enabled</span>'
                     : '<span style="color: #F20707;">Disabled</span>';
 
-                toggleExtensionButton.querySelector('span').textContent = data.extensionEnabled ? 'OFF' : 'ON';
+                toggleExtensionButton.querySelector('span').textContent = extensionEnabled ? 'OFF' : 'ON';
 
-                // Call the animation function
                 animateInfoText();
                 animateMessageText();
             });
@@ -73,8 +75,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadSavedMessages() {
         chrome.storage.local.get(Object.keys(textareas), function (data) {
             for (let map in textareas) {
-                textareas[map].value = data[map] || '';  // Load saved message or set empty if not set
-                textareas[map].disabled = true;          // Keep textareas disabled initially
+                textareas[map].value = data[map] || '';
+                textareas[map].disabled = true;
             }
         });
     }
@@ -82,12 +84,18 @@ document.addEventListener('DOMContentLoaded', function () {
     function switchTextarea() {
         const selectedMap = mapSelector.value;
         for (let map in textareas) {
-            if (map === selectedMap) {
-                textareas[map].style.display = 'block';
-            } else {
-                textareas[map].style.display = 'none';
-            }
+            textareas[map].style.display = (map === selectedMap) ? 'block' : 'none';
         }
+    }
+
+    function toggleUIElements(enable) {
+        const elementsToToggle = [
+            changeButton, clearButton, logoutButton, mapSelector, ...positionItems, ...Object.values(textareas)
+        ];
+
+        elementsToToggle.forEach(element => {
+            element.disabled = !enable;
+        });
     }
 
     loadSavedMessages();
@@ -104,11 +112,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!isDisabled) {
             const savedMessage = currentTextarea.value.trim();
-
-            const storageKey = (selectedMap === 'GeneralChat') ? 'GeneralChat' : selectedMap;
+            const storageKey = selectedMap;
             chrome.storage.local.set({ [storageKey]: savedMessage }, () => {
                 console.log(`${storageKey} message saved:`, savedMessage);
-                currentTextarea.disabled = true;  // Disable textarea again after saving
+                currentTextarea.disabled = true;
             });
         }
     });
@@ -118,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const currentTextarea = textareas[selectedMap];
         currentTextarea.value = '';
 
-        const storageKey = (selectedMap === 'GeneralChat') ? 'GeneralChat' : selectedMap;
+        const storageKey = selectedMap;
         chrome.storage.local.set({ [storageKey]: '' }, () => {
             console.log(`${storageKey} message cleared.`);
         });
@@ -133,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
     logoutButton.addEventListener('click', function () {
         chrome.storage.local.remove(['nickname', 'country', 'accessToken', 'refreshToken', 'playerId'], function () {
             console.log('Local storage cleared.');
-            updateUI(false);
+            updateUI(false, false);
         });
     });
 
@@ -145,6 +152,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 extensionState.innerHTML = newState
                     ? '<span style="color: #6BBE49;">Enabled</span>'
                     : '<span style="color: #F20707;">Disabled</span>';
+
+                // Enable or disable all UI elements based on the new state
+                toggleUIElements(newState);
             });
         });
     });
@@ -161,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 currentTextarea.value += ` ${positionText}`;
             }
 
-            const storageKey = (selectedMap === 'GeneralChat') ? 'GeneralChat' : selectedMap;
+            const storageKey = selectedMap;
             chrome.storage.local.set({ [storageKey]: currentTextarea.value.trim() }, () => {
                 console.log('Message updated with position and saved to local storage:', currentTextarea.value.trim());
             });
@@ -268,10 +278,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const isLoggedIn = !!data.nickname && !!data.playerId;
             if (data.extensionEnabled === undefined) {
                 chrome.storage.local.set({ extensionEnabled: true }, function () {
-                    updateUI(isLoggedIn);
+                    updateUI(isLoggedIn, true);
                 });
             } else {
-                updateUI(isLoggedIn);
+                updateUI(isLoggedIn, data.extensionEnabled);
             }
         });
     }
@@ -279,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
     chrome.storage.onChanged.addListener(function (changes, areaName) {
         if (areaName === 'local') {
             if (changes.nickname && changes.playerId) {
-                updateUI(!!(changes.nickname.newValue && changes.playerId.newValue));
+                updateUI(!!(changes.nickname.newValue && changes.playerId.newValue), changes.extensionEnabled?.newValue);
             }
             if (changes.GeneralChat) {
                 textareas.GeneralChat.value = changes.GeneralChat.newValue || '';
@@ -293,6 +303,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 extensionState.innerHTML = changes.extensionEnabled.newValue
                     ? '<span style="color: #6BBE49;">Enabled</span>'
                     : '<span style="color: #F20707;">Disabled</span>';
+
+                // Enable or disable UI elements based on the extensionEnabled state
+                toggleUIElements(changes.extensionEnabled.newValue);
             }
         }
     });
