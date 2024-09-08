@@ -259,13 +259,13 @@ function checkForMatchRoomTab(matchId, attempts = 0) {
 }
 
 function triggerMessageSending(matchId) {
-    chrome.storage.local.get(['savedMessage', 'accessToken', 'extensionEnabled'], async (data) => {
+    chrome.storage.local.get(['GeneralChat', 'accessToken', 'extensionEnabled'], async (data) => {
         if (!data.extensionEnabled) {
             console.log('Extension is disabled. Message will not be sent.');
             return;
         }
 
-        const message = data.savedMessage || '';
+        const message = data.GeneralChat || '';
         const roomId = `match-${matchId}`;
 
         // Decrypt the access token before using it
@@ -287,6 +287,7 @@ function triggerMessageSending(matchId) {
             .catch(error => console.error('Error sending message:', error));
     });
 }
+
 
 function refreshAccessToken() {
     loadSettings(settings => {

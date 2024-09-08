@@ -103,11 +103,12 @@ document.addEventListener('DOMContentLoaded', function () {
         changeButton.querySelector('span').textContent = isDisabled ? 'SAVE' : 'ENTER A MESSAGE';
 
         if (!isDisabled) {
-            const savedMessage = currentTextarea.value;
+            const savedMessage = currentTextarea.value.trim();
 
-            const storageKey = (selectedMap === 'GeneralChat') ? 'savedMessage' : selectedMap;
+            const storageKey = (selectedMap === 'GeneralChat') ? 'GeneralChat' : selectedMap;
             chrome.storage.local.set({ [storageKey]: savedMessage }, () => {
                 console.log(`${storageKey} message saved:`, savedMessage);
+                currentTextarea.disabled = true;  // Disable textarea again after saving
             });
         }
     });
@@ -117,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const currentTextarea = textareas[selectedMap];
         currentTextarea.value = '';
 
-        const storageKey = (selectedMap === 'GeneralChat') ? 'savedMessage' : selectedMap;
+        const storageKey = (selectedMap === 'GeneralChat') ? 'GeneralChat' : selectedMap;
         chrome.storage.local.set({ [storageKey]: '' }, () => {
             console.log(`${storageKey} message cleared.`);
         });
@@ -160,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 currentTextarea.value += ` ${positionText}`;
             }
 
-            const storageKey = (selectedMap === 'GeneralChat') ? 'savedMessage' : selectedMap;
+            const storageKey = (selectedMap === 'GeneralChat') ? 'GeneralChat' : selectedMap;
             chrome.storage.local.set({ [storageKey]: currentTextarea.value.trim() }, () => {
                 console.log('Message updated with position and saved to local storage:', currentTextarea.value.trim());
             });
@@ -280,8 +281,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (changes.nickname && changes.playerId) {
                 updateUI(!!(changes.nickname.newValue && changes.playerId.newValue));
             }
-            if (changes.savedMessage) {
-                textareas.GeneralChat.value = changes.savedMessage.newValue || '';
+            if (changes.GeneralChat) {
+                textareas.GeneralChat.value = changes.GeneralChat.newValue || '';
             }
             Object.keys(textareas).forEach((map) => {
                 if (changes[map]) {
