@@ -334,3 +334,35 @@ input {
         cursor:pointer;
         background-color: #272727;
     }
+
+#third-screen p {
+    margin-left: 60px;
+    margin-right: 60px;
+    text-align: justify; /* Ensure text is aligned on both sides */
+    line-height: 2;
+    letter-spacing: 2px;
+    font-size: 13px;
+}
+
+#third-screen-title {
+    margin-bottom: 20px;
+    margin-top: 5%;
+    text-align: center; /* Center title */
+}
+
+#HowDoesItWork {
+    color: #7393B3;
+    margin-left: 60px;
+    margin-right: 60px;
+    text-align: justify; /* Ensure heading is aligned on both sides */
+    font-size: 16px !important;
+}
+
+#third-screen a {
+    text-decoration: none;
+    color: #7393B3;
+}
+
+    #third-screen a:hover {
+        background-color: #272727;
+    }

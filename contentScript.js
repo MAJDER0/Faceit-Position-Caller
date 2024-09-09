@@ -42,14 +42,29 @@ function sendMessageToRoom(message) {
     }
 }
 
-// Function to send message to team chat
+function waitForElement(selector, callback, timeout = 5000) {
+    const startTime = Date.now();
+
+    // Polling function to check if element is present
+    const check = () => {
+        const element = document.querySelector(selector);
+        if (element) {
+            callback(element);
+        } else if (Date.now() - startTime >= timeout) {
+            console.error("Element not found within the timeout period.");
+        } else {
+            requestAnimationFrame(check);
+        }
+    };
+
+    check();
+}
+
 function sendTeamChatMessage(message) {
     console.log("Attempting to send team chat message:", message);
 
-    // Select the textarea where the placeholder starts with "Message team"
-    const teamTextArea = document.querySelector('textarea[placeholder^="Message team"]');
-
-    if (teamTextArea) {
+    // Use the waitForElement to ensure the textarea is ready before sending the message
+    waitForElement('textarea[placeholder^="Message team"]', (teamTextArea) => {
         console.log('Team chat textarea found:', teamTextArea);
         teamTextArea.focus();
         teamTextArea.value = message;
@@ -64,7 +79,5 @@ function sendTeamChatMessage(message) {
         teamTextArea.dispatchEvent(enterEvent);
 
         console.log("Team chat message sent:", message);
-    } else {
-        console.error("Team chat textarea not found");
-    }
+    });
 }

@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
             messageContainer.style.display = isThirdScreenVisible ? 'none' : 'block';
             thirdScreen.style.display = isThirdScreenVisible ? 'block' : 'none';
 
-            bodyElement.style.width = '630px';
+            bodyElement.style.width = '635px';
             bodyElement.style.height = '535px';
 
             FAQElement.style.display = 'block';
@@ -184,10 +184,14 @@ document.addEventListener('DOMContentLoaded', function () {
             messageContainer.style.display = 'none';
             thirdScreen.style.display = 'block';
             FAQElement.textContent = "BACK";
+            bodyElement.style.width = '685px';
+            bodyElement.style.height = '555px';
         } else {
             thirdScreen.style.display = 'none';
             messageContainer.style.display = 'block';
             FAQElement.textContent = "DETAILS";
+            bodyElement.style.width = '635px';
+            bodyElement.style.height = '535px';
         }
     });
 
