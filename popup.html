@@ -44,12 +44,23 @@
             <option value="Nuke">Nuke</option>
         </select>
 
+        <div id="MapPicksContainer">
+            <span>PICKS:</span>
+            <select id="mapPicks">
+                <option value="TeamChatMap">Team chat</option>
+                <option value="GeneralChat">General chat</option>
+                <option value="BothChat">Both (are you ok?)</option>
+            </select>
+        </div>
+
         <div id="Clear"><span>clear</span></div>
 
         <!-- Default textarea for General chat -->
         <textarea id="message" placeholder="Send your message instantly to the general chat after a match is found..." disabled></textarea>
 
         <textarea id="TeamChat" placeholder="Send your message to the team chat after a match is found..." style="display: none;" disabled></textarea>
+
+
         <textarea id="Ancient" placeholder="Send your message after Ancient has been picked..." style="display: none;" disabled></textarea>
         <textarea id="Mirage" placeholder="Send your message after Mirage has been picked..." style="display: none;" disabled></textarea>
         <textarea id="Dust2" placeholder="Send your message after Dust2 has been picked..." style="display: none;" disabled></textarea>
@@ -67,14 +78,14 @@
     </div>
 
     <div id="third-screen" style="display: none;">
-        <p id="third-screen-title">Faceit Position Caller is part of the Faceit Stats Provider project.</p>
+        <p id="third-screen-title">Faceit Position Caller is part of the <span style="color: #cd4500;">Faceit Stats Provider</span> project.</p>
         <p>
            The extension is in beta and will remain so as long as Faceit developers provide the necessary tools for us, as developers, to ensure our applications work seamlessly with their servers.
-            For now, in the beta version, there are many things that might not work as expected. The best course of action if something goes wrong is to log out and log back in. If that doesn’t resolve the issue, feel free to contact me via <a href="https://steamcommunity.com/profiles/76561198298220008" target="_blank">Steam</a>.
+            For now, in the beta version, there are many things that might not work as expected. The best course of action if something goes wrong is to log out and log back in. If that doesn’t resolve the issue, feel free to contact me via <a href="https://steamcommunity.com/profiles/76561198298220008" target="_blank">steam</a>.
         </p>
 
         <p id="HowDoesItWork">How does it work?</p>
-        <p>Entering a message in the first two options of the drop-down menu will send a message to both General and Team Faceit chat as soon as the match starts. The remaining options, which include map names, will automatically send a message to Team chat right after the map is picked.</p>
+        <p>Entering a message in the first two options of the drop-down menu will send a message to both General and Team Faceit chat as soon as the match starts. The remaining options, which include map names, will automatically send a message to selected chat (PICKS) right after the map is picked. <span style="color: #cd4500;">For the best reliability and speed, it's recommended to send messages to General chat, as they are sent directly through a server call and are less likely to encounter issues.</span></p>
 
     </div>
 

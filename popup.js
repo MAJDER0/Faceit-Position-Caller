@@ -15,6 +15,70 @@ document.addEventListener('DOMContentLoaded', function () {
     const thirdScreen = document.getElementById('third-screen');
     const mapSelector = document.getElementById('mapSelector');
 
+    const mapPicksDropdown = document.getElementById('mapPicks');
+
+
+    // Load saved mapPicks state on popup load
+    chrome.storage.local.get('mapPicks', function (data) {
+        if (data.mapPicks) {
+            mapPicksDropdown.value = data.mapPicks;  // Set the value to the saved mapPicks state
+            adjustWidth(data.mapPicks);              // Adjust width based on saved state
+        }
+    });
+
+    // Save the selected mapPicks value to local storage whenever it changes
+    mapPicksDropdown.addEventListener('change', function () {
+        const selectedValue = mapPicksDropdown.value;
+
+        // Save the selected value in chrome.storage.local
+        chrome.storage.local.set({ 'mapPicks': selectedValue }, function () {
+            console.log(`MapPicks state saved: ${selectedValue}`);
+        });
+
+        // Adjust the width based on the selected value
+        adjustWidth(selectedValue);
+    });
+
+    // Function to adjust the width of the dropdown
+    function adjustWidth(selectedValue) {
+        if (selectedValue === 'TeamChatMap') {
+            mapPicksDropdown.style.width = '50%';
+        } else if (selectedValue === 'GeneralChat') {
+            mapPicksDropdown.style.width = '60%';
+        } else if (selectedValue === 'BothChat') {
+            mapPicksDropdown.style.width = '75%';
+        }
+    }
+
+    // Trigger initial placeholder updates and map visibility
+    document.getElementById('mapPicks').addEventListener('change', updatePlaceholders);
+    document.getElementById('mapSelector').addEventListener('change', updatePlaceholders);
+
+    function updatePlaceholders() {
+        const chatType = document.getElementById('mapPicks').value;
+        const map = document.getElementById('mapSelector').value;
+
+        let chatLabel = chatType === 'TeamChatMap' ? 'team chat' : chatType === 'GeneralChat' ? 'general chat' : 'both chats';
+
+        const maps = ['Ancient', 'Mirage', 'Dust2', 'Anubis', 'Inferno', 'Vertigo', 'Nuke'];
+
+        maps.forEach(mapName => {
+            const textarea = document.getElementById(mapName);
+            if (textarea) {
+                textarea.placeholder = `Send your message to the ${chatLabel} after ${mapName} has been picked...`;
+            }
+        });
+
+        // Dynamically show the correct textarea based on the map selection
+        maps.forEach(mapName => {
+            const textarea = document.getElementById(mapName);
+            if (textarea) {
+                textarea.style.display = map === mapName ? 'block' : 'none';
+            }
+        });
+    }
+
+
     // Textareas for different maps
     const textareas = {
         GeneralChat: document.getElementById('message'),
@@ -36,8 +100,8 @@ document.addEventListener('DOMContentLoaded', function () {
             messageContainer.style.display = isThirdScreenVisible ? 'none' : 'block';
             thirdScreen.style.display = isThirdScreenVisible ? 'block' : 'none';
 
-            bodyElement.style.width = '635px';
-            bodyElement.style.height = '535px';
+            bodyElement.style.width = '645px';
+            bodyElement.style.height = '555px';
 
             FAQElement.style.display = 'block';
             logoElement.style.top = '5%';
@@ -75,7 +139,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadSavedMessages() {
         chrome.storage.local.get(Object.keys(textareas), function (data) {
             for (let map in textareas) {
+                // Load the message from storage or leave it empty if not present
                 textareas[map].value = data[map] || '';
+
+                // Always disable the text areas initially
                 textareas[map].disabled = true;
             }
         });
@@ -98,24 +165,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    loadSavedMessages();
     switchTextarea();
 
     changeButton.addEventListener('click', function () {
         const selectedMap = mapSelector.value;
         const currentTextarea = textareas[selectedMap];
-        const isDisabled = currentTextarea.disabled;
 
-        currentTextarea.disabled = !isDisabled;
-        currentTextarea.focus();
-        changeButton.querySelector('span').textContent = isDisabled ? 'SAVE' : 'ENTER A MESSAGE';
-
-        if (!isDisabled) {
+        if (currentTextarea.disabled) {
+            // Enable the textarea and focus it
+            currentTextarea.disabled = false;
+            currentTextarea.focus();
+            changeButton.querySelector('span').textContent = 'SAVE';
+        } else {
+            // Save the message and disable the textarea
             const savedMessage = currentTextarea.value.trim();
             const storageKey = selectedMap;
+
             chrome.storage.local.set({ [storageKey]: savedMessage }, () => {
                 console.log(`${storageKey} message saved:`, savedMessage);
                 currentTextarea.disabled = true;
+                changeButton.querySelector('span').textContent = 'ENTER A MESSAGE';
             });
         }
     });
@@ -184,14 +253,14 @@ document.addEventListener('DOMContentLoaded', function () {
             messageContainer.style.display = 'none';
             thirdScreen.style.display = 'block';
             FAQElement.textContent = "BACK";
-            bodyElement.style.width = '685px';
-            bodyElement.style.height = '555px';
+            bodyElement.style.width = '705px';
+            bodyElement.style.height = '598px';
         } else {
             thirdScreen.style.display = 'none';
             messageContainer.style.display = 'block';
             FAQElement.textContent = "DETAILS";
             bodyElement.style.width = '635px';
-            bodyElement.style.height = '535px';
+            bodyElement.style.height = '545px';
         }
     });
 
@@ -313,4 +382,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     });
+
+    loadSavedMessages();
 });

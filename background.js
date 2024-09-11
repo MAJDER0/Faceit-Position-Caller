@@ -101,7 +101,7 @@ async function getMatchDetails(matchId, callback) {
     });
 }
 
-// Function to fetch the message for the selected map
+// Function to fetch the message for the selected map and decide whether to send it to Team Chat or General Chat
 function fetchMessageForMap(mapPick) {
     if (!mapPick) {
         console.error('No map selected');
@@ -121,19 +121,65 @@ function fetchMessageForMap(mapPick) {
     const textAreaId = mapTextAreas[mapPick];
 
     if (textAreaId) {
-        chrome.storage.local.get(textAreaId, (data) => {
+        chrome.storage.local.get([textAreaId, 'mapPicks', 'matchId'], (data) => {
             const message = data[textAreaId] || '';
-            console.log(`Message for ${textAreaId}:`, message);
+            const mapPicksState = data.mapPicks;
+            const matchId = data.matchId;
 
-            chrome.storage.local.get('matchId', (storedData) => {
-                const matchId = storedData.matchId;
-                checkForMatchRoomTabAndSendMessage(matchId, message);
-            });
+            if (!message) {
+                console.error(`No message found for ${textAreaId}`);
+                return;
+            }
+
+            if (mapPicksState === 'TeamChatMap') {
+                console.log(`Sending message to Team Chat for map: ${mapPick}`);
+                checkForMatchRoomTabAndSendMessage(matchId, message);  // Call the function for Team Chat
+            } else if (mapPicksState === 'GeneralChat') {
+                console.log(`Sending message to General Chat for map: ${mapPick}`);
+                triggerMessageSendingForMapPick(matchId, message);  // Call the function for General Chat
+            } else if (mapPicksState === 'BothChat') {
+                checkForMatchRoomTabAndSendMessage(matchId, message)
+                triggerMessageSendingForMapPick(matchId, message);               
+            } else {
+                console.error('Unknown mapPicks state');
+            }
         });
     } else {
         console.error('Map not recognized or no corresponding textarea found.');
     }
 }
+
+// Function to trigger message sending to General Chat for a selected map pick
+function triggerMessageSendingForMapPick(matchId, message) {
+    chrome.storage.local.get(['accessToken', 'extensionEnabled'], async (data) => {
+        if (!data.extensionEnabled) {
+            console.log('Extension is disabled. Message will not be sent.');
+            return;
+        }
+
+        const roomId = `match-${matchId}`;
+
+        // Decrypt the access token before using it
+        const { ciphertext, iv, key } = data.accessToken;
+        const decryptedToken = await decryptToken(ciphertext, iv, key);
+
+        console.log(`Sending message to General Chat room: ${roomId}, Message: ${message}`);
+
+        // Send the message to the general chat via POST request
+        fetch(`https://open.faceit.com/chat/v1/rooms/${roomId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${decryptedToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ body: message })
+        })
+            .then(response => response.json())
+            .then(responseData => console.log('Message sent, response:', responseData))
+            .catch(error => console.error('Error sending message:', error));
+    });
+}
+
 
 // Optimized function to check for the match room tab and send a message
 function checkForMatchRoomTabAndSendMessage(matchId, messageToSend) {
