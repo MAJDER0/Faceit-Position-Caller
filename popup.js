@@ -14,9 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const FAQElement = document.getElementById('FAQ-text');
     const thirdScreen = document.getElementById('third-screen');
     const mapSelector = document.getElementById('mapSelector');
-
     const mapPicksDropdown = document.getElementById('mapPicks');
-
 
     // Load saved mapPicks state on popup load
     chrome.storage.local.get('mapPicks', function (data) {
@@ -39,7 +37,6 @@ document.addEventListener('DOMContentLoaded', function () {
         adjustWidth(selectedValue);
     });
 
-    // Function to adjust the width of the dropdown
     function adjustWidth(selectedValue) {
         if (selectedValue === 'TeamChatMap') {
             mapPicksDropdown.style.width = '50%';
@@ -50,7 +47,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Trigger initial placeholder updates and map visibility
     document.getElementById('mapPicks').addEventListener('change', updatePlaceholders);
     document.getElementById('mapSelector').addEventListener('change', updatePlaceholders);
 
@@ -78,8 +74,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-
-    // Textareas for different maps
     const textareas = {
         GeneralChat: document.getElementById('message'),
         TeamChat: document.getElementById('TeamChat'),
@@ -106,7 +100,6 @@ document.addEventListener('DOMContentLoaded', function () {
             FAQElement.style.display = 'block';
             logoElement.style.top = '5%';
 
-            // Disable or enable the UI elements based on the extensionEnabled state
             toggleUIElements(extensionEnabled);
 
             chrome.storage.local.get(['nickname', 'country'], (data) => {
@@ -119,6 +112,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     : '<span style="color: #F20707;">Disabled</span>';
 
                 toggleExtensionButton.querySelector('span').textContent = extensionEnabled ? 'OFF' : 'ON';
+
+                if (data.mapPicks) {
+                    mapPicksDropdown.value = data.mapPicks;  // Set the dropdown to the saved value
+                    adjustWidth(data.mapPicks);              // Adjust width based on saved state
+                } else {
+                    adjustWidth('TeamChatMap');  // Default to TeamChatMap if no mapPicks saved
+                }
 
                 animateInfoText();
                 animateMessageText();
@@ -139,10 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadSavedMessages() {
         chrome.storage.local.get(Object.keys(textareas), function (data) {
             for (let map in textareas) {
-                // Load the message from storage or leave it empty if not present
                 textareas[map].value = data[map] || '';
-
-                // Always disable the text areas initially
                 textareas[map].disabled = true;
             }
         });
@@ -157,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function toggleUIElements(enable) {
         const elementsToToggle = [
-            changeButton, clearButton, logoutButton, mapSelector, ...positionItems, ...Object.values(textareas)
+            changeButton, clearButton, ...positionItems
         ];
 
         elementsToToggle.forEach(element => {
@@ -172,17 +169,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const currentTextarea = textareas[selectedMap];
 
         if (currentTextarea.disabled) {
-            // Enable the textarea and focus it
             currentTextarea.disabled = false;
             currentTextarea.focus();
             changeButton.querySelector('span').textContent = 'SAVE';
         } else {
-            // Save the message and disable the textarea
             const savedMessage = currentTextarea.value.trim();
             const storageKey = selectedMap;
 
             chrome.storage.local.set({ [storageKey]: savedMessage }, () => {
-                console.log(`${storageKey} message saved:`, savedMessage);
                 currentTextarea.disabled = true;
                 changeButton.querySelector('span').textContent = 'ENTER A MESSAGE';
             });
@@ -207,9 +201,13 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     logoutButton.addEventListener('click', function () {
-        chrome.storage.local.remove(['nickname', 'country', 'accessToken', 'refreshToken', 'playerId'], function () {
-            console.log('Local storage cleared.');
-            updateUI(false, false);
+        chrome.storage.local.clear(function () {
+            if (chrome.runtime.lastError) {
+                console.error("Error clearing local storage: ", chrome.runtime.lastError);
+            } else {
+                console.log('Local storage cleared.');
+                updateUI(false, false);
+            }
         });
     });
 
@@ -222,7 +220,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     ? '<span style="color: #6BBE49;">Enabled</span>'
                     : '<span style="color: #F20707;">Disabled</span>';
 
-                // Enable or disable all UI elements based on the new state
                 toggleUIElements(newState);
             });
         });
@@ -349,12 +346,14 @@ document.addEventListener('DOMContentLoaded', function () {
     function checkLoginState() {
         chrome.storage.local.get(['nickname', 'playerId', 'extensionEnabled'], function (data) {
             const isLoggedIn = !!data.nickname && !!data.playerId;
+
             if (data.extensionEnabled === undefined) {
-                chrome.storage.local.set({ extensionEnabled: true }, function () {
-                    updateUI(isLoggedIn, true);
+                chrome.storage.local.set({ extensionEnabled: false }, function () {
+                    updateUI(isLoggedIn, false);
                 });
             } else {
                 updateUI(isLoggedIn, data.extensionEnabled);
+                toggleExtensionButton.querySelector('span').textContent = data.extensionEnabled ? 'OFF' : 'ON';
             }
         });
     }
@@ -377,7 +376,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     ? '<span style="color: #6BBE49;">Enabled</span>'
                     : '<span style="color: #F20707;">Disabled</span>';
 
-                // Enable or disable UI elements based on the extensionEnabled state
                 toggleUIElements(changes.extensionEnabled.newValue);
             }
         }
