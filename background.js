@@ -130,7 +130,7 @@ function fetchMessageForMap(mapPick) {
                 console.error(`No message found for ${textAreaId}`);
                 return;
             }
-
+            console.log('xxx',mapPicksState);
             if (mapPicksState === 'TeamChatMap') {
                 console.log(`Sending message to Team Chat for map: ${mapPick}`);
                 checkForMatchRoomTabAndSendMessage(matchId, message);  // Call the function for Team Chat

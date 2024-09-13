@@ -16,27 +16,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const mapSelector = document.getElementById('mapSelector');
     const mapPicksDropdown = document.getElementById('mapPicks');
 
-    // Load saved mapPicks state on popup load
-    chrome.storage.local.get('mapPicks', function (data) {
-        if (data.mapPicks) {
-            mapPicksDropdown.value = data.mapPicks;  // Set the value to the saved mapPicks state
-            adjustWidth(data.mapPicks);              // Adjust width based on saved state
-        }
-    });
+    let isThirdScreenVisible = false;
 
-    // Save the selected mapPicks value to local storage whenever it changes
-    mapPicksDropdown.addEventListener('change', function () {
-        const selectedValue = mapPicksDropdown.value;
-
-        // Save the selected value in chrome.storage.local
-        chrome.storage.local.set({ 'mapPicks': selectedValue }, function () {
-            console.log(`MapPicks state saved: ${selectedValue}`);
-        });
-
-        // Adjust the width based on the selected value
-        adjustWidth(selectedValue);
-    });
-
+    // Adjust the width of the mapPicks dropdown based on the current selection
     function adjustWidth(selectedValue) {
         if (selectedValue === 'TeamChatMap') {
             mapPicksDropdown.style.width = '50%';
@@ -47,8 +29,53 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    document.getElementById('mapPicks').addEventListener('change', updatePlaceholders);
-    document.getElementById('mapSelector').addEventListener('change', updatePlaceholders);
+    // Load saved mapPicks and mapSelector state on popup load
+    chrome.storage.local.get(['mapPicks', 'mapSelector'], function (data) {
+        // Load or set default for mapPicks
+        if (data.mapPicks) {
+            mapPicksDropdown.value = data.mapPicks;
+            adjustWidth(data.mapPicks);
+        } else {
+            // Default to 'TeamChatMap' if mapPicks is not set
+            chrome.storage.local.set({ 'mapPicks': 'TeamChatMap' }, function () {
+                mapPicksDropdown.value = 'TeamChatMap';
+                adjustWidth('TeamChatMap');
+                console.log('mapPicks set to TeamChatMap by default');
+            });
+        }
+
+        // Load saved mapSelector value
+        if (data.mapSelector) {
+            mapSelector.value = data.mapSelector;
+        } else {
+            // Default to 'GeneralChat' on first load if mapSelector is not set
+            chrome.storage.local.set({ 'mapSelector': 'GeneralChat' }, function () {
+                mapSelector.value = 'GeneralChat';
+                console.log('mapSelector set to GeneralChat by default');
+            });
+        }
+        updatePlaceholders();
+        switchTextarea();
+    });
+
+    // Save the selected mapPicks value to local storage whenever it changes
+    mapPicksDropdown.addEventListener('change', function () {
+        const selectedValue = mapPicksDropdown.value;
+        chrome.storage.local.set({ 'mapPicks': selectedValue }, function () {
+            console.log(`MapPicks state saved: ${selectedValue}`);
+        });
+        adjustWidth(selectedValue);
+    });
+
+    // Save the selected mapSelector value to local storage whenever it changes
+    mapSelector.addEventListener('change', function () {
+        const selectedValue = mapSelector.value;
+        chrome.storage.local.set({ 'mapSelector': selectedValue }, function () {
+            console.log(`MapSelector state saved: ${selectedValue}`);
+        });
+        updatePlaceholders();
+        switchTextarea();
+    });
 
     function updatePlaceholders() {
         const chatType = document.getElementById('mapPicks').value;
@@ -62,14 +89,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const textarea = document.getElementById(mapName);
             if (textarea) {
                 textarea.placeholder = `Send your message to the ${chatLabel} after ${mapName} has been picked...`;
-            }
-        });
-
-        // Dynamically show the correct textarea based on the map selection
-        maps.forEach(mapName => {
-            const textarea = document.getElementById(mapName);
-            if (textarea) {
-                textarea.style.display = map === mapName ? 'block' : 'none';
             }
         });
     }
@@ -86,7 +105,12 @@ document.addEventListener('DOMContentLoaded', function () {
         Nuke: document.getElementById('Nuke')
     };
 
-    let isThirdScreenVisible = false;
+    function switchTextarea() {
+        const selectedMap = mapSelector.value;
+        for (let map in textareas) {
+            textareas[map].style.display = (map === selectedMap) ? 'block' : 'none';
+        }
+    }
 
     function updateUI(isLoggedIn, extensionEnabled) {
         if (isLoggedIn) {
@@ -102,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             toggleUIElements(extensionEnabled);
 
-            chrome.storage.local.get(['nickname', 'country'], (data) => {
+            chrome.storage.local.get(['nickname', 'country', 'mapPicks'], (data) => {
                 if (data.nickname && data.country) {
                     messagePlayerInfo.innerHTML = `Hello, ${data.nickname} <img class="flague" src="https://flagsapi.com/${data.country.toUpperCase()}/shiny/64.png" width="22px" height="22px">`;
                 }
@@ -113,6 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 toggleExtensionButton.querySelector('span').textContent = extensionEnabled ? 'OFF' : 'ON';
 
+                // Ensure the correct width is set based on the saved mapPicks
                 if (data.mapPicks) {
                     mapPicksDropdown.value = data.mapPicks;  // Set the dropdown to the saved value
                     adjustWidth(data.mapPicks);              // Adjust width based on saved state
@@ -145,17 +170,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function switchTextarea() {
-        const selectedMap = mapSelector.value;
-        for (let map in textareas) {
-            textareas[map].style.display = (map === selectedMap) ? 'block' : 'none';
-        }
-    }
-
     function toggleUIElements(enable) {
-        const elementsToToggle = [
-            changeButton, clearButton, ...positionItems
-        ];
+        const elementsToToggle = [changeButton, clearButton, ...positionItems];
 
         elementsToToggle.forEach(element => {
             element.disabled = !enable;
@@ -201,13 +217,19 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     logoutButton.addEventListener('click', function () {
-        chrome.storage.local.clear(function () {
-            if (chrome.runtime.lastError) {
-                console.error("Error clearing local storage: ", chrome.runtime.lastError);
-            } else {
-                console.log('Local storage cleared.');
-                updateUI(false, false);
-            }
+        // Reset mapSelector to GeneralChat on logout
+        chrome.storage.local.set({ 'mapPicks': null, 'mapSelector': 'GeneralChat' }, function () {
+            chrome.storage.local.clear(function () {
+                if (chrome.runtime.lastError) {
+                    console.error("Error clearing local storage: ", chrome.runtime.lastError);
+                } else {
+                    console.log('Local storage cleared.');
+                    mapPicksDropdown.value = 'TeamChatMap'; // Reset the dropdown to default visually
+                    mapSelector.value = 'GeneralChat'; // Reset mapSelector to GeneralChat
+                    adjustWidth('TeamChatMap'); // Reset the width to default
+                    updateUI(false, false);  // Update the UI to reflect logged out state
+                }
+            });
         });
     });
 
@@ -344,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function () {
     checkLoginState();
 
     function checkLoginState() {
-        chrome.storage.local.get(['nickname', 'playerId', 'extensionEnabled'], function (data) {
+        chrome.storage.local.get(['nickname', 'playerId', 'extensionEnabled', 'mapPicks'], function (data) {
             const isLoggedIn = !!data.nickname && !!data.playerId;
 
             if (data.extensionEnabled === undefined) {
@@ -353,7 +375,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             } else {
                 updateUI(isLoggedIn, data.extensionEnabled);
-                toggleExtensionButton.querySelector('span').textContent = data.extensionEnabled ? 'OFF' : 'ON';
+            }
+
+            console.log(data.mapPicks);
+
+            // Set mapPicks to TeamChatMap if it's not defined (first login)
+            if (!data.mapPicks) {
+                chrome.storage.local.set({ mapPicks: 'TeamChatMap' }, function () {
+                    mapPicksDropdown.value = 'TeamChatMap'; // Set the dropdown to TeamChatMap
+                    adjustWidth('TeamChatMap'); // Adjust width based on TeamChatMap
+                    console.log('mapPicks state set to TeamChatMap by default');
+                });
+            } else {
+                adjustWidth(data.mapPicks); // Adjust width based on saved mapPicks
             }
         });
     }
