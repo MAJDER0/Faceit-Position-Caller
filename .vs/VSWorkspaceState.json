@@ -1,10 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\Assets",
-    "\\fonts",
     "\\libs"
   ],
-  "SelectedNode": "\\popup.js",
+  "SelectedNode": "\\background.js",
   "PreviewInSolutionExplorer": false
 }

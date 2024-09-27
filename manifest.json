@@ -12,7 +12,8 @@
     "webNavigation",
     "alarms",
     "cookies",
-    "webRequest"
+    "webRequest",
+    "identity.email"
   ],
   "host_permissions": [
     "https://*.faceit.com/*"
@@ -32,6 +33,9 @@
     },
     "default_title": "Faceit Position Caller",
     "default_popup": "popup.html"
+  },
+  "icons": {
+    "128": "Assets/Faceit_Extension.png"
   },
   "web_accessible_resources": [
     {
