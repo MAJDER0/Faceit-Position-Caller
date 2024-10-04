@@ -12,8 +12,7 @@
     "webNavigation",
     "alarms",
     "cookies",
-    "webRequest",
-    "identity.email"
+    "webRequest"
   ],
   "host_permissions": [
     "https://*.faceit.com/*"
