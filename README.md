@@ -1,7 +1,7 @@
 ##  ![Faceit Position Caller](https://github.com/user-attachments/assets/c2ea1d2b-ac3e-408d-b017-dbe65a942a5e) $\Large\textsf{\color{#E0115F}{Faceit Position Caller}}$
 Call your position in the blink of an eye, without lifting a finger. <br>
 
-https://github.com/user-attachments/assets/d2b4dcc8-024a-41f0-8e3f-5e3055b7c7a4
+https://github.com/user-attachments/assets/4ce2f77c-8293-4b0c-83cb-4c18a430eb68
 
 ## $\large\textsf{\color{#3a865b}{What is Faceit Position Caller?}}$
 
