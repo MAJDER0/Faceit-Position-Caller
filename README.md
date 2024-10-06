@@ -29,5 +29,5 @@ Now, you can call your positions instantly without even touching a keyboard.
 
 <br>
 
-  **$\large\textsf{\color{#ffcc4d}{This extension is currently in beta and will remain so while we await further support from FACEIT's developers to }}$**
-  **$\large\textsf{\color{#ffcc4d}{ensure seamless integration with their servers. During this phase, some features may not work as expected.}}$**
+  **$\large\textsf{\color{#ffcc4d}{This extension is currently in beta and will remain so while we await further support from FACEIT's developers}}$**
+  **$\large\textsf{\color{#ffcc4d}{to ensure seamless integration with their servers. During this phase, some features may not work as expected.}}$**
